@@ -7,7 +7,10 @@ gemspec
 
 gem "irb"
 gem "rake", "~> 13.0"
+gem "ruby_llm"
 
-gem "minitest", "~> 5.16"
+group :developmet, :test do
+  gem "minitest", "~> 5.16"
 
-gem "rubocop", "~> 1.21"
+  gem "rubocop", "~> 1.21"
+end
