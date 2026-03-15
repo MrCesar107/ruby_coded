@@ -22,7 +22,7 @@ module RubyCode
       COVER
 
       def self.print_cover_message
-        BANNER.sub("%<version>s", RubyCode::VERSION)
+        puts BANNER.sub("%<version>s", RubyCode::VERSION)
       end
     end
   end
