@@ -8,6 +8,7 @@ gemspec
 gem "irb"
 gem "rake", "~> 13.0"
 gem "ruby_llm"
+gem "webrick"
 
 group :developmet, :test do
   gem "minitest", "~> 5.16"
