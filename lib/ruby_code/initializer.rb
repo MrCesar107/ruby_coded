@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "tty-prompt"
+
 require_relative "initializer/cover"
 require_relative "config/user_config"
 require_relative "auth/auth_manager"
@@ -9,6 +11,7 @@ module RubyCode
   class Initializer
     def initialize
       @user_cfg = UserConfig.new
+      @prompt = TTY::Prompt.new
       @current_directory_permission = @user_cfg.get_config("current_directory_permission")
 
       print_cover
@@ -23,19 +26,18 @@ module RubyCode
     end
 
     def ask_for_directory_permission
-      puts "Do you trust this directory? (y/n)"
-      answer = gets.chomp
-      @current_directory_permission = answer == "y"
+      @current_directory_permission = @prompt.yes?("Do you trust this directory?")
       @user_cfg.sat_config("current_directory_permission", @current_directory_permission)
     end
 
     def check_authentication
       nil if @user_cfg.get_config("provider")
 
-      puts "You must login to an AI provider. Please select one of the following:"
-      Auth::AuthManager.new.configured_providers.each do |provider|
-        puts "> - #{provider}"
-      end
+      provider = @prompt.select("You must login to an AI provider. Please select one of the following:",
+                                Auth::AuthManager.new.configured_providers,
+                                per_page: 10)
+      puts "Logging in to #{provider}..."
+      # Auth::AuthManager.new.login(provider)
     end
   end
 end
