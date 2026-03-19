@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
+require "tty-prompt"
+
 module RubyCode
   module Strategies
     # Base interface for all authentication strategies
     class Base
       def initialize(provider)
         @provider = provider
+        @prompt = TTY::Prompt.new
       end
 
       def authenticate

@@ -9,13 +9,21 @@ module RubyCode
       @user_config = find_or_create_config_file
     end
 
-    def get_config(key)
-      @user_config["user_config"][key]
+    def full_config
+      @user_config
     end
 
-    def sat_config(key, value)
-      @user_config["user_config"][key] = value
-      File.write(".config.yaml", @user_config.to_yaml)
+    def get_config(key)
+      full_config["user_config"][key]
+    end
+
+    def set_config(key, value)
+      full_config["user_config"][key] = value
+      File.write(".config.yaml", full_config.to_yaml)
+    end
+
+    def save
+      File.write(".config.yaml", full_config.to_yaml)
     end
 
     private

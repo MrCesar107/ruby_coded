@@ -1,18 +1,25 @@
 # frozen_string_literal: true
 
+require "securerandom"
+require "faraday"
+require "json"
+require "uri"
+require "time"
+
 require_relative "base"
 require_relative "../auth/pkce"
 require_relative "../auth/oauth_callback_server"
+require_relative "../errors/auth_error"
 
 module RubyCode
   module Strategies
     # OAuth strategy for authentication with OAuth providers (OPENAI)
     class OAuthStrategy < Base
       def authenticate
-        pkce = PKCE.generate
+        pkce = Auth::PKCE.generate
         state = SecureRandom.hex(16)
 
-        server = OAuthCallbackServer.new
+        server = Auth::OAuthCallbackServer.new
         server.start
 
         url = build_auth_url(pkce[:challenge], state)
@@ -22,37 +29,39 @@ module RubyCode
 
         result = server.wait_for_callback
 
-        raise AuthError, result[:error] if result[:error]
-        raise AuthError, "State mismatch" if result[:state] != state
+        raise Auth::Errors::AuthError, result[:error] if result[:error]
+        raise Auth::Errors::AuthError, "State mismatch" if result[:state] != state
 
         tokens = exchange_code(result[:code], pkce[:verifier])
 
         {
-          type: "oauth",
-          access_token: tokens[:access_token],
-          refresh_token: tokens[:refresh_token],
-          expires_at: (Time.now + tokens["expires_in"].to_i).iso8601
+          "auth_method" => "oauth",
+          "access_token" => tokens["access_token"],
+          "refresh_token" => tokens["refresh_token"],
+          "expires_at" => (Time.now + tokens["expires_in"].to_i).iso8601
         }
       end
 
       def refresh(credentials)
         response = Faraday.post(@provider.token_url, {
-                                  grant_type: "refresh_token",
-                                  refresh_token: credentials[:refresh_token],
-                                  client_id: @provider.client_id
+                                  "grant_type" => "refresh_token",
+                                  "refresh_token" => credentials["refresh_token"],
+                                  "client_id" => @provider.client_id
                                 })
         tokens = JSON.parse(response.body)
 
         {
-          type: "oauth",
-          access_token: tokens[:access_token],
-          refresh_token: tokens[:refresh_token] || credentials[:refresh_token],
-          expires_at: (Time.now + tokens["expires_in"].to_i).iso8601
+          "auth_method" => "oauth",
+          "access_token" => tokens["access_token"],
+          "refresh_token" => tokens["refresh_token"] ||
+            credentials["refresh_token"],
+          "expires_at" => (Time.now + tokens["expires_in"].to_i).iso8601
         }
       end
 
       def validate(credentials)
-        return false unless credentials&.dig("access_token")
+        return false unless credentials&.fetch("auth_method") ==
+                            "oauth" && credentials&.fetch("access_token")
 
         Time.parse(credentials["expires_at"]) > Time.now
       end
@@ -74,11 +83,11 @@ module RubyCode
 
       def exchange_code(code, verifier)
         response = Faraday.post(@provider.token_url, {
-                                  grant_type: "authorization_code",
-                                  code: code,
-                                  redirect_uri: @provider.redirect_uri,
-                                  client_id: @provider.client_id,
-                                  code_verifier: verifier
+                                  "grant_type" => "authorization_code",
+                                  "code" => code,
+                                  "redirect_uri" => @provider.redirect_uri,
+                                  "client_id" => @provider.client_id,
+                                  "code_verifier" => verifier
                                 })
         JSON.parse(response.body)
       end

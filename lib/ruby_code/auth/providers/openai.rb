@@ -12,8 +12,11 @@ module RubyCode
           "app_EMoamEEZ73f0CkXaXp7hrann"
         end
 
-        def self.strategy
-          :oauth
+        def self.auth_methods
+          [
+            { key: :oauth, label: "With your ChatGPT subscription (Go, Pro or Plus)" },
+            { key: :api_key, label: "With your OpenAI API key (tokens consumption will be charged to your account)" }
+          ]
         end
 
         def self.auth_url
@@ -22,6 +25,14 @@ module RubyCode
 
         def self.token_url
           "https://auth.openai.com/oauth/token"
+        end
+
+        def self.console_url
+          "https://platform.openai.com/account/api-keys"
+        end
+
+        def self.key_pattern
+          /\Ask-/
         end
 
         def self.redirect_uri

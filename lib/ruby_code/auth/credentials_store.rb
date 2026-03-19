@@ -9,22 +9,26 @@ module RubyCode
     # This class is used to manage the credentials in the config file
     class CredentialsStore
       def initialize
-        @user_cfg = UserConfig.new.find_or_create_config_file
+        @config = UserConfig.new
       end
 
       def store(provider_name, credentials)
-        @user_cfg["provider"] ||= {}
-        @user_cfg["provider"][provider_name] = credentials
-        File.write("./config.yaml", @user_cfg.to_yaml)
+        cfg = @config.full_config
+        cfg["providers"] ||= {}
+        cfg["providers"][provider_name.to_s] = credentials
+        @config.save
       end
 
       def retrieve(provider_name)
-        @user_cfg["provider"][provider_name]
+        @config.full_config.dig("providers", provider_name.to_s)
       end
 
       def remove(provider_name)
-        @user_cfg["provider"].delete(provider_name)
-        File.write("./config.yaml", @user_cfg.to_yaml)
+        providers = @config.full_config["providers"]
+        return unless providers
+
+        providers.delete(provider_name.to_s)
+        @config.save
       end
     end
   end

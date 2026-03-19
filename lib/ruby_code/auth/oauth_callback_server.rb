@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require "webrick"
+require "timeout"
 
 require_relative "callback_servlet"
 
 module RubyCode
   module Auth
+    # This class is used to start a local webrick server for the
+    # OAuth authentication callback
     class OAuthCallbackServer
       PORT = 18_192
       TIMEOUT = 120

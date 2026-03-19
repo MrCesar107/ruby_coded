@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "ruby_code/version"
+require_relative "ruby_code/config/user_config"
+require_relative "ruby_code/auth/auth_manager"
 require_relative "ruby_code/initializer"
 
 begin
@@ -10,5 +12,7 @@ end
 
 # Main module for the RubyCode gem
 module RubyCode
-  Initializer.new
+  def self.start
+    Initializer.new
+  end
 end

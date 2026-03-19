@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require "securerandom"
+require "base64"
+require "digest"
+
 module RubyCode
   module Auth
     # Generates a Proof Key for Code Exchange

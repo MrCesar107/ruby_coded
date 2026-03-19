@@ -26,7 +26,7 @@ module RubyCode
             <body>
               <h2>You are now logged</h2>
               <p>You can close this window now.</p>
-              <script>window.close();/script>
+              <script>window.close();</script>
             </body>
           </html>
         HTML

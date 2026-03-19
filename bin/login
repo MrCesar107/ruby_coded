@@ -4,7 +4,4 @@
 require "bundler/setup"
 require "ruby_code"
 
-RubyCode.start
-
-require "irb"
-IRB.start(__FILE__)
+RubyCode::Auth::AuthManager.new.login_prompt
