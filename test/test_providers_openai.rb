@@ -51,7 +51,7 @@ class TestProvidersOpenAI < Minitest::Test
   end
 
   def test_redirect_uri
-    assert_equal "http://localhost:18192/callback", provider.redirect_uri
+    assert_equal "http://localhost:1455/auth/callback", provider.redirect_uri
   end
 
   def test_ruby_llm_key

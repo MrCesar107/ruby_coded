@@ -10,13 +10,13 @@ module RubyCode
     # This class is used to start a local webrick server for the
     # OAuth authentication callback
     class OAuthCallbackServer
-      PORT = 18_192
+      PORT = 1_455
       TIMEOUT = 120
 
       def initialize
         @result_queue = Queue.new
         @server = WEBrick::HTTPServer.new(Port: PORT, Logger: WEBrick::Log.new("/dev/null"), AccessLog: [])
-        @server.mount "/callback", CallbackServlet, @result_queue
+        @server.mount "/auth/callback", CallbackServlet, @result_queue
       end
 
       def start

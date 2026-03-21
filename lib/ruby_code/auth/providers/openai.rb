@@ -36,7 +36,7 @@ module RubyCode
         end
 
         def self.redirect_uri
-          "http://localhost:18192/callback"
+          "http://localhost:1455/auth/callback"
         end
 
         def self.scopes
