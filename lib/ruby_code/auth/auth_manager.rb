@@ -5,6 +5,7 @@ require "ruby_llm"
 require "tty-prompt"
 
 require_relative "providers/openai"
+require_relative "providers/anthropic"
 require_relative "../strategies/oauth_strategy"
 require_relative "../strategies/api_key_strategy"
 require_relative "credentials_store"
@@ -14,7 +15,10 @@ module RubyCode
     # This class is used to manage the authentication process for the different
     # AI providers
     class AuthManager
-      PROVIDERS = { openai: Providers::OpenAI }.freeze
+      PROVIDERS = {
+        openai: Providers::OpenAI,
+        anthropic: Providers::Anthropic
+      }.freeze
 
       def login(provider_name)
         provider = PROVIDERS.fetch(provider_name)
@@ -92,7 +96,10 @@ module RubyCode
       end
 
       def choose_auth_method(provider)
-        choices = provider.auth_methods.map { |m| { name: m[:label], value: m[:key] } }
+        methods = provider.auth_methods
+        return methods.first[:key] if methods.size == 1
+
+        choices = methods.map { |m| { name: m[:label], value: m[:key] } }
         prompt.select("How would you like to authenticate with #{provider.display_name}?", choices)
       end
     end

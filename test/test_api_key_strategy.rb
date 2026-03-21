@@ -2,6 +2,7 @@
 
 require "test_helper"
 require "ruby_code/auth/providers/openai"
+require "ruby_code/auth/providers/anthropic"
 require "ruby_code/strategies/api_key_strategy"
 
 class TestAPIKeyStrategy < Minitest::Test
@@ -86,5 +87,68 @@ class TestAPIKeyStrategy < Minitest::Test
   def test_validate_returns_false_for_nil_key
     credentials = { "auth_method" => "api_key", "key" => nil }
     refute @strategy.validate(credentials)
+  end
+end
+
+class TestAPIKeyStrategyWithAnthropic < Minitest::Test
+  def setup
+    @provider = RubyCode::Auth::Providers::Anthropic
+    @strategy = RubyCode::Strategies::APIKeyStrategy.new(@provider)
+  end
+
+  def test_authenticate_returns_credentials_with_valid_anthropic_key
+    mock_prompt = Minitest::Mock.new
+    mock_prompt.expect(:say, nil, [String])
+    mock_prompt.expect(:ask, "sk-ant-api03-abc123", [String])
+    mock_prompt.expect(:say, nil, [String])
+
+    @strategy.stub(:open_browser, nil) do
+      @strategy.instance_variable_set(:@prompt, mock_prompt)
+      result = @strategy.authenticate
+
+      assert_equal "api_key", result["auth_method"]
+      assert_equal "sk-ant-api03-abc123", result["key"]
+    end
+
+    mock_prompt.verify
+  end
+
+  def test_authenticate_raises_on_openai_key_format
+    mock_prompt = Minitest::Mock.new
+    mock_prompt.expect(:say, nil, [String])
+    mock_prompt.expect(:ask, "sk-proj-abc123", [String])
+
+    @strategy.stub(:open_browser, nil) do
+      @strategy.instance_variable_set(:@prompt, mock_prompt)
+
+      assert_raises(RuntimeError) { @strategy.authenticate }
+    end
+  end
+
+  def test_authenticate_raises_on_invalid_format
+    mock_prompt = Minitest::Mock.new
+    mock_prompt.expect(:say, nil, [String])
+    mock_prompt.expect(:ask, "not-a-valid-key", [String])
+
+    @strategy.stub(:open_browser, nil) do
+      @strategy.instance_variable_set(:@prompt, mock_prompt)
+
+      assert_raises(RuntimeError) { @strategy.authenticate }
+    end
+  end
+
+  def test_validate_returns_true_for_valid_anthropic_key
+    credentials = { "auth_method" => "api_key", "key" => "sk-ant-api03-valid" }
+    assert @strategy.validate(credentials)
+  end
+
+  def test_validate_returns_false_for_openai_key
+    credentials = { "auth_method" => "api_key", "key" => "sk-proj-abc123" }
+    refute @strategy.validate(credentials)
+  end
+
+  def test_refresh_returns_credentials_unchanged
+    credentials = { "auth_method" => "api_key", "key" => "sk-ant-api03-test" }
+    assert_equal credentials, @strategy.refresh(credentials)
   end
 end

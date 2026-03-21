@@ -20,6 +20,10 @@ class TestAuthManager < Minitest::Test
     assert_includes @manager.configured_providers, :openai
   end
 
+  def test_configured_providers_includes_anthropic
+    assert_includes @manager.configured_providers, :anthropic
+  end
+
   def test_configured_providers_returns_array_of_symbols
     @manager.configured_providers.each do |provider|
       assert_instance_of Symbol, provider
@@ -145,6 +149,43 @@ class TestAuthManager < Minitest::Test
     assert_equal "eyJoauth", configured_key
   end
 
+  def test_configure_ruby_llm_sets_anthropic_api_key
+    store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
+    manager = RubyCode::Auth::AuthManager.new
+
+    configured_key = nil
+    RubyLLM.stub(:configure, ->(&block) {
+      config = Minitest::Mock.new
+      config.expect(:anthropic_api_key=, nil, ["sk-ant-api03-test"])
+      block.call(config)
+      configured_key = "sk-ant-api03-test"
+      config.verify
+    }) do
+      manager.configure_ruby_llm!
+    end
+
+    assert_equal "sk-ant-api03-test", configured_key
+  end
+
+  def test_configure_ruby_llm_sets_both_providers_when_both_configured
+    store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-openai-test" })
+    store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
+    manager = RubyCode::Auth::AuthManager.new
+
+    keys_set = {}
+    RubyLLM.stub(:configure, ->(&block) {
+      config = Object.new
+      config.define_singleton_method(:openai_api_key=) { |v| keys_set[:openai] = v }
+      config.define_singleton_method(:anthropic_api_key=) { |v| keys_set[:anthropic] = v }
+      block.call(config)
+    }) do
+      manager.configure_ruby_llm!
+    end
+
+    assert_equal "sk-openai-test", keys_set[:openai]
+    assert_equal "sk-ant-api03-test", keys_set[:anthropic]
+  end
+
   def test_configure_ruby_llm_skips_unconfigured_providers
     manager = RubyCode::Auth::AuthManager.new
 
@@ -156,11 +197,68 @@ class TestAuthManager < Minitest::Test
     end
   end
 
+  def test_login_anthropic_stores_credentials
+    strategy_mock = Minitest::Mock.new
+    strategy_mock.expect(:authenticate, { "auth_method" => "api_key", "key" => "sk-ant-api03-stored" })
+
+    RubyCode::Strategies::APIKeyStrategy.stub(:new, strategy_mock) do
+      stub_ruby_llm_configure do
+        @manager.login(:anthropic)
+      end
+    end
+
+    retrieved = credential_store.retrieve(:anthropic)
+    assert_equal "api_key", retrieved["auth_method"]
+    assert_equal "sk-ant-api03-stored", retrieved["key"]
+    strategy_mock.verify
+  end
+
+  def test_logout_anthropic_removes_credentials
+    store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
+    manager = RubyCode::Auth::AuthManager.new
+
+    RubyLLM.stub(:configure, nil) do
+      manager.logout(:anthropic)
+    end
+
+    assert_nil credential_store.retrieve(:anthropic)
+  end
+
+  def test_check_authentication_skips_when_anthropic_credentials_exist
+    store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
+    manager = RubyCode::Auth::AuthManager.new
+
+    result = manager.check_authentication
+    assert_nil result
+  end
+
+  def test_choose_auth_method_skips_prompt_for_single_method_provider
+    strategy_mock = Minitest::Mock.new
+    strategy_mock.expect(:authenticate, { "auth_method" => "api_key", "key" => "sk-ant-api03-auto" })
+
+    stub_prompt = Object.new
+    call_count = 0
+    stub_prompt.define_singleton_method(:select) do |*_args, **_kwargs|
+      call_count += 1
+      :anthropic
+    end
+    @manager.instance_variable_set(:@prompt, stub_prompt)
+
+    RubyCode::Strategies::APIKeyStrategy.stub(:new, strategy_mock) do
+      stub_ruby_llm_configure do
+        @manager.login(:anthropic)
+      end
+    end
+
+    assert_equal 0, call_count, "Prompt#select should not be called for auth method when provider has only one method"
+    strategy_mock.verify
+  end
+
   private
 
   def stub_ruby_llm_configure(&block)
     fake_configure = ->(&config_block) {
-      config = Struct.new(:openai_api_key).new
+      config = Struct.new(:openai_api_key, :anthropic_api_key).new
       config_block.call(config) if config_block
     }
     RubyLLM.stub(:configure, fake_configure, &block)
