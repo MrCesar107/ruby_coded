@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../initializer/cover"
+
 module RubyCode
   module Chat
     class Renderer
@@ -30,12 +32,15 @@ module RubyCode
       private
 
       def render_chat_panel(frame, area)
-        lines = @state.messages_snapshot.map do |m|
-          "#{m[:role]}: #{m[:content]}"
-        end.join("\n")
+        messages = @state.messages_snapshot
+        text = if messages.empty?
+                 cover_banner
+               else
+                 messages.map { |m| "#{m[:role]}: #{m[:content]}" }.join("\n")
+               end
 
         widget = @tui.paragraph(
-          text: lines,
+          text: text,
           block: @tui.block(
             title: @state.model.to_s,
             borders: [:all]
@@ -122,6 +127,10 @@ module RubyCode
         provider = model.respond_to?(:provider) ? model.provider : "unknown"
         current_marker = id == @state.model ? " *" : ""
         "#{id} (#{provider})#{current_marker}"
+      end
+
+      def cover_banner
+        Initializer::Cover::BANNER.sub("%<version>s", RubyCode::VERSION)
       end
     end
   end

@@ -17,7 +17,6 @@ module RubyCode
       @current_directory_permission = @user_cfg.get_config("current_directory_permission")
       @auth_manager = Auth::AuthManager.new
 
-      print_cover
       ask_for_directory_permission unless @current_directory_permission
       @auth_manager.check_authentication
       @auth_manager.configure_ruby_llm!
@@ -25,10 +24,6 @@ module RubyCode
     end
 
     private
-
-    def print_cover
-      Cover.print_cover_message
-    end
 
     def ask_for_directory_permission
       @current_directory_permission = @prompt.yes?("Do you trust this directory?")

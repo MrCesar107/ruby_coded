@@ -16,18 +16,6 @@ class TestInitializer < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_prints_cover_banner
-    write_config(current_directory_permission: true, with_provider: true)
-
-    output = capture_io do
-      stub_auth_manager do
-        RubyCode::Initializer.new
-      end
-    end.first
-
-    assert_includes output, "v#{RubyCode::VERSION}"
-  end
-
   def test_does_not_ask_permission_when_already_granted
     write_config(current_directory_permission: true, with_provider: true)
 
