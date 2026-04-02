@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "time"
 require "ruby_llm"
 require "tty-prompt"
 
@@ -52,10 +53,13 @@ module RubyCode
 
       def configure_ruby_llm!
         RubyLLM.configure do |config|
+          config.max_retries = 1
+
           PROVIDERS.each do |name, provider|
             credentials = credential_store.retrieve(name)
             next unless credentials
 
+            credentials = refresh_if_expired(name, provider, credentials)
             key = extract_api_key(credentials)
             config.send("#{provider.ruby_llm_key}=", key)
           end
@@ -93,6 +97,25 @@ module RubyCode
         when "oauth"   then credentials["access_token"]
         when "api_key" then credentials["key"]
         end
+      end
+
+      def refresh_if_expired(provider_name, provider, credentials)
+        return credentials unless credentials["auth_method"] == "oauth"
+        return credentials unless token_expired?(credentials)
+
+        strategy = Strategies::OAuthStrategy.new(provider)
+        refreshed = strategy.refresh(credentials)
+        credential_store.store(provider_name, refreshed)
+        refreshed
+      rescue StandardError
+        credentials
+      end
+
+      def token_expired?(credentials)
+        expires_at = credentials["expires_at"]
+        return false unless expires_at
+
+        Time.parse(expires_at) <= Time.now + 60
       end
 
       def choose_auth_method(provider)

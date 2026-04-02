@@ -10,6 +10,7 @@ gem "rake", "~> 13.0"
 gem "ruby_llm"
 gem "webrick"
 gem "tty-prompt"
+gem "ratatui_ruby", "~> 1.4"
 
 group :developmet, :test do
   gem "minitest", "~> 5.16"

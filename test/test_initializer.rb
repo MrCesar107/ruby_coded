@@ -91,7 +91,9 @@ class TestInitializer < Minitest::Test
     auth_mock.define_singleton_method(:configure_ruby_llm!) { nil }
 
     RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
-      capture_io { RubyCode::Initializer.new }
+      stub_chat_app do
+        capture_io { RubyCode::Initializer.new }
+      end
     end
 
     assert check_called
@@ -106,7 +108,9 @@ class TestInitializer < Minitest::Test
     auth_mock.define_singleton_method(:configure_ruby_llm!) { configure_called = true }
 
     RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
-      capture_io { RubyCode::Initializer.new }
+      stub_chat_app do
+        capture_io { RubyCode::Initializer.new }
+      end
     end
 
     assert configure_called
@@ -134,11 +138,20 @@ class TestInitializer < Minitest::Test
     stub
   end
 
+  def stub_chat_app(&block)
+    app_mock = Object.new
+    app_mock.define_singleton_method(:run) { nil }
+
+    RubyCode::Chat::App.stub(:new, app_mock, &block)
+  end
+
   def stub_auth_manager(&block)
     auth_mock = Object.new
     auth_mock.define_singleton_method(:check_authentication) { nil }
     auth_mock.define_singleton_method(:configure_ruby_llm!) { nil }
 
-    RubyCode::Auth::AuthManager.stub(:new, auth_mock, &block)
+    RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
+      stub_chat_app(&block)
+    end
   end
 end

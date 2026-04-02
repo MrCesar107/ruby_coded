@@ -101,7 +101,7 @@ class TestAuthManager < Minitest::Test
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
     manager = RubyCode::Auth::AuthManager.new
 
-    RubyLLM.stub(:configure, nil) do
+    stub_ruby_llm_configure do
       manager.logout(:openai)
     end
 
@@ -115,6 +115,7 @@ class TestAuthManager < Minitest::Test
     configured_key = nil
     RubyLLM.stub(:configure, ->(&block) {
       config = Minitest::Mock.new
+      config.expect(:max_retries=, nil, [1])
       config.expect(:openai_api_key=, nil, ["sk-from-config"])
       block.call(config)
       configured_key = "sk-from-config"
@@ -138,6 +139,7 @@ class TestAuthManager < Minitest::Test
     configured_key = nil
     RubyLLM.stub(:configure, ->(&block) {
       config = Minitest::Mock.new
+      config.expect(:max_retries=, nil, [1])
       config.expect(:openai_api_key=, nil, ["eyJoauth"])
       block.call(config)
       configured_key = "eyJoauth"
@@ -156,6 +158,7 @@ class TestAuthManager < Minitest::Test
     configured_key = nil
     RubyLLM.stub(:configure, ->(&block) {
       config = Minitest::Mock.new
+      config.expect(:max_retries=, nil, [1])
       config.expect(:anthropic_api_key=, nil, ["sk-ant-api03-test"])
       block.call(config)
       configured_key = "sk-ant-api03-test"
@@ -175,6 +178,7 @@ class TestAuthManager < Minitest::Test
     keys_set = {}
     RubyLLM.stub(:configure, ->(&block) {
       config = Object.new
+      config.define_singleton_method(:max_retries=) { |_v| nil }
       config.define_singleton_method(:openai_api_key=) { |v| keys_set[:openai] = v }
       config.define_singleton_method(:anthropic_api_key=) { |v| keys_set[:anthropic] = v }
       block.call(config)
@@ -191,6 +195,7 @@ class TestAuthManager < Minitest::Test
 
     RubyLLM.stub(:configure, ->(&block) {
       config = Object.new
+      config.define_singleton_method(:max_retries=) { |_v| nil }
       block.call(config)
     }) do
       manager.configure_ruby_llm!
@@ -217,7 +222,7 @@ class TestAuthManager < Minitest::Test
     store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
     manager = RubyCode::Auth::AuthManager.new
 
-    RubyLLM.stub(:configure, nil) do
+    stub_ruby_llm_configure do
       manager.logout(:anthropic)
     end
 
@@ -230,6 +235,111 @@ class TestAuthManager < Minitest::Test
 
     result = manager.check_authentication
     assert_nil result
+  end
+
+  def test_configure_ruby_llm_refreshes_expired_oauth_token
+    expired_credentials = {
+      "auth_method" => "oauth",
+      "access_token" => "expired-token",
+      "refresh_token" => "rt-valid",
+      "expires_at" => (Time.now - 3600).iso8601
+    }
+    store_credentials(:openai, expired_credentials)
+    manager = RubyCode::Auth::AuthManager.new
+
+    refreshed_tokens = {
+      "auth_method" => "oauth",
+      "access_token" => "fresh-token",
+      "refresh_token" => "rt-valid",
+      "expires_at" => (Time.now + 3600).iso8601
+    }
+
+    strategy_mock = Minitest::Mock.new
+    strategy_mock.expect(:refresh, refreshed_tokens, [expired_credentials])
+
+    configured_key = nil
+    RubyCode::Strategies::OAuthStrategy.stub(:new, strategy_mock) do
+      RubyLLM.stub(:configure, ->(&block) {
+        config = Object.new
+        config.define_singleton_method(:max_retries=) { |_v| nil }
+        config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
+        block.call(config)
+      }) do
+        manager.configure_ruby_llm!
+      end
+    end
+
+    assert_equal "fresh-token", configured_key
+    assert_equal "fresh-token", credential_store.retrieve(:openai)["access_token"]
+    strategy_mock.verify
+  end
+
+  def test_configure_ruby_llm_does_not_refresh_valid_oauth_token
+    valid_credentials = {
+      "auth_method" => "oauth",
+      "access_token" => "still-valid",
+      "refresh_token" => "rt-test",
+      "expires_at" => (Time.now + 3600).iso8601
+    }
+    store_credentials(:openai, valid_credentials)
+    manager = RubyCode::Auth::AuthManager.new
+
+    configured_key = nil
+    RubyLLM.stub(:configure, ->(&block) {
+      config = Object.new
+      config.define_singleton_method(:max_retries=) { |_v| nil }
+      config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
+      block.call(config)
+    }) do
+      manager.configure_ruby_llm!
+    end
+
+    assert_equal "still-valid", configured_key
+  end
+
+  def test_configure_ruby_llm_falls_back_on_refresh_failure
+    expired_credentials = {
+      "auth_method" => "oauth",
+      "access_token" => "expired-but-fallback",
+      "refresh_token" => "rt-bad",
+      "expires_at" => (Time.now - 3600).iso8601
+    }
+    store_credentials(:openai, expired_credentials)
+    manager = RubyCode::Auth::AuthManager.new
+
+    failing_strategy = Object.new
+    failing_strategy.define_singleton_method(:refresh) { |_creds| raise "refresh failed" }
+
+    configured_key = nil
+    RubyCode::Strategies::OAuthStrategy.stub(:new, failing_strategy) do
+      RubyLLM.stub(:configure, ->(&block) {
+        config = Object.new
+        config.define_singleton_method(:max_retries=) { |_v| nil }
+        config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
+        block.call(config)
+      }) do
+        manager.configure_ruby_llm!
+      end
+    end
+
+    assert_equal "expired-but-fallback", configured_key
+  end
+
+  def test_configure_ruby_llm_does_not_refresh_api_key_credentials
+    store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-stable" })
+    manager = RubyCode::Auth::AuthManager.new
+
+    configured_key = nil
+    RubyLLM.stub(:configure, ->(&block) {
+      config = Object.new
+      config.define_singleton_method(:max_retries=) { |_v| nil }
+      config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
+      block.call(config)
+    }) do
+      manager.configure_ruby_llm!
+    end
+
+    assert_equal "sk-stable", configured_key
   end
 
   def test_choose_auth_method_skips_prompt_for_single_method_provider
@@ -258,7 +368,7 @@ class TestAuthManager < Minitest::Test
 
   def stub_ruby_llm_configure(&block)
     fake_configure = ->(&config_block) {
-      config = Struct.new(:openai_api_key, :anthropic_api_key).new
+      config = Struct.new(:openai_api_key, :anthropic_api_key, :max_retries).new
       config_block.call(config) if config_block
     }
     RubyLLM.stub(:configure, fake_configure, &block)
