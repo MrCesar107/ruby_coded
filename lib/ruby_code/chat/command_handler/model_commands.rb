@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../model_filter"
+
 module RubyCode
   module Chat
     class CommandHandler
@@ -11,6 +13,7 @@ module RubyCode
           return open_model_selector if rest.nil? || rest.strip.empty?
 
           name = rest.strip
+          return open_model_selector(show_all: true) if name == "--all"
           return unless find_model_match(name)
 
           switch_to_model(name)
@@ -41,8 +44,9 @@ module RubyCode
           @state.add_message(:system, "Model switched to #{name}.")
         end
 
-        def open_model_selector
+        def open_model_selector(show_all: false)
           models = fetch_models_for_authenticated_providers
+          models = ModelFilter.filter(models) unless show_all
 
           if models.empty?
             @state.add_message(:system,
@@ -50,7 +54,7 @@ module RubyCode
             return
           end
 
-          @state.enter_model_select!(models)
+          @state.enter_model_select!(models, show_all: show_all)
         end
 
         def fetch_models_for_authenticated_providers

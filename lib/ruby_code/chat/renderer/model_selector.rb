@@ -43,13 +43,14 @@ module RubyCode
         end
 
         def model_list_widget(items, count)
+          title = @state.model_select_show_all? ? "All Models (#{count})" : "Models (#{count})"
           @tui.list(
             items: items,
             selected_index: @state.model_select_index,
             highlight_style: @tui.style(bg: :blue, fg: :white, modifiers: [:bold]),
             highlight_symbol: "> ",
             scroll_padding: 2,
-            block: @tui.block(title: "Models (#{count})", borders: [:all])
+            block: @tui.block(title: title, borders: [:all])
           )
         end
 

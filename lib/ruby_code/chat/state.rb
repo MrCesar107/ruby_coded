@@ -29,6 +29,7 @@ module RubyCode
         @model_list = []
         @model_select_index = 0
         @model_select_filter = String.new
+        @model_select_show_all = false
         init_plugin_state
       end
 

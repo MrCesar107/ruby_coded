@@ -9,10 +9,15 @@ module RubyCode
           @mode == :model_select
         end
 
-        def enter_model_select!(models)
+        def model_select_show_all?
+          @model_select_show_all == true
+        end
+
+        def enter_model_select!(models, show_all: false)
           @model_list = models
           @model_select_index = 0
           @model_select_filter = String.new
+          @model_select_show_all = show_all
           @mode = :model_select
         end
 
@@ -21,6 +26,7 @@ module RubyCode
           @model_list = []
           @model_select_index = 0
           @model_select_filter = String.new
+          @model_select_show_all = false
         end
 
         def model_select_up

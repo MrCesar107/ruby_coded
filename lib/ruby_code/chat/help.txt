@@ -2,6 +2,7 @@ Available commands:
   /help              Show this help message
   /model             Select a model from available providers
   /model <name>      Switch directly to a named model
+  /model --all       Select from all models (including deprecated)
   /clear             Clear the conversation history
   /history           Show conversation summary
   /tokens            Show token usage for this session
