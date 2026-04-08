@@ -23,10 +23,18 @@ module RubyCode
           render_chat_panel(frame, chat_area)
           render_input_panel(frame, input_area)
           render_model_selector(frame, chat_area) if @state.model_select?
+          render_plugin_overlays(frame, chat_area, input_area)
         end
       end
 
       private
+
+      # Calls each plugin's render method in registration order.
+      def render_plugin_overlays(frame, chat_area, input_area)
+        RubyCode.plugin_registry.render_configs.each do |config|
+          send(config[:method], frame, chat_area, input_area)
+        end
+      end
 
       def main_layout(frame)
         @tui.layout_split(

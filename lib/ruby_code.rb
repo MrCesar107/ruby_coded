@@ -16,3 +16,5 @@ module RubyCode
     Initializer.new
   end
 end
+
+require_relative "ruby_code/plugins"

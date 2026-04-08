@@ -29,6 +29,7 @@ module RubyCode
         @model_list = []
         @model_select_index = 0
         @model_select_filter = String.new
+        init_plugin_state
       end
 
       def streaming?
@@ -41,10 +42,12 @@ module RubyCode
 
       def append_to_input(text)
         @input_buffer << text
+        reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
 
       def delete_last_char
         @input_buffer.chop!
+        reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
 
       def clear_input!
@@ -55,6 +58,21 @@ module RubyCode
         input = @input_buffer.dup
         @input_buffer.clear
         input
+      end
+
+      private
+
+      # Calls plugin state initializers (e.g. init_command_completion).
+      def init_plugin_state
+        return unless RubyCode.respond_to?(:plugin_registry)
+
+        RubyCode.plugin_registry.plugins.each do |plugin|
+          ext = plugin.state_extension
+          next unless ext
+
+          init_method = :"init_#{plugin.plugin_name}"
+          send(init_method) if respond_to?(init_method, true)
+        end
       end
     end
   end

@@ -16,6 +16,7 @@ module RubyCode
       def initialize(model:, user_config: nil)
         @model = model
         @user_config = user_config
+        apply_plugin_extensions!
         @state = State.new(model: model)
         @llm_bridge = LLMBridge.new(@state)
         @input_handler = InputHandler.new(@state)
@@ -36,6 +37,15 @@ module RubyCode
       end
 
       private
+
+      def apply_plugin_extensions!
+        RubyCode.plugin_registry.apply_extensions!(
+          state_class: State,
+          input_handler_class: InputHandler,
+          renderer_class: Renderer,
+          command_handler_class: CommandHandler
+        )
+      end
 
       def build_command_handler
         CommandHandler.new(

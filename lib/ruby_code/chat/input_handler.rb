@@ -55,11 +55,25 @@ module RubyCode
 
       def handle_normal_mode(event)
         return :quit if event.ctrl_c?
+
+        plugin_action = try_plugin_inputs(event)
+        return plugin_action if plugin_action
+
         return submit if event.enter?
         return backspace if event.backspace?
         return clear_input if event.esc?
 
         scroll_or_append(event)
+      end
+
+      # Runs each plugin's input handler in registration order.
+      # Returns the first non-nil action, or nil if no plugin handled it.
+      def try_plugin_inputs(event)
+        RubyCode.plugin_registry.input_handler_configs.each do |config|
+          result = send(config[:method], event)
+          return result if result
+        end
+        nil
       end
 
       def scroll_or_append(event)

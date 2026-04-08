@@ -8,11 +8,13 @@ require_relative "command_handler/history_commands"
 module RubyCode
   module Chat
     # Handles slash commands entered in the chat input.
+    # Base commands are always available; plugins can contribute
+    # additional commands via the plugin registry.
     class CommandHandler
       include ModelCommands
       include HistoryCommands
 
-      COMMANDS = {
+      BASE_COMMANDS = {
         "/help" => :cmd_help,
         "/exit" => :cmd_exit,
         "/quit" => :cmd_exit,
@@ -29,6 +31,7 @@ module RubyCode
         @llm_bridge = llm_bridge
         @user_config = user_config
         @credentials_store = credentials_store
+        @commands = build_command_map
       end
 
       def handle(raw_input)
@@ -36,7 +39,7 @@ module RubyCode
         return if stripped.empty?
 
         command, rest = stripped.split(" ", 2)
-        method_name = COMMANDS[command.downcase]
+        method_name = @commands[command.downcase]
 
         if method_name
           send(method_name, rest)
@@ -47,8 +50,20 @@ module RubyCode
 
       private
 
+      def build_command_map
+        cmds = BASE_COMMANDS.dup
+        cmds.merge!(RubyCode.plugin_registry.all_commands)
+        cmds
+      end
+
       def cmd_help(_rest)
-        @state.add_message(:system, HELP_TEXT)
+        text = HELP_TEXT.dup
+        plugin_descs = RubyCode.plugin_registry.all_command_descriptions
+        unless plugin_descs.empty?
+          text += "\nPlugin commands:\n"
+          plugin_descs.each { |cmd, desc| text += "  #{cmd.ljust(18)} #{desc}\n" }
+        end
+        @state.add_message(:system, text)
       end
 
       def cmd_exit(_rest)
