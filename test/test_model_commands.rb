@@ -21,22 +21,22 @@ class TestModelCommands < Minitest::Test
     assert_equal "some-model", @host.model_id("some-model")
   end
 
-  def test_model_match?_returns_true_when_no_models
+  def test_model_match_returns_true_when_no_models
     @host.models = []
     assert @host.model_match?("anything")
   end
 
-  def test_model_match?_returns_true_when_model_found
+  def test_model_match_returns_true_when_model_found
     @host.models = [FakeModel.new("gpt-4o", "openai")]
     assert @host.model_match?("gpt-4o")
   end
 
-  def test_model_match?_returns_false_when_not_found
+  def test_model_match_returns_false_when_not_found
     @host.models = [FakeModel.new("gpt-4o", "openai")]
     refute @host.model_match?("gpt-5")
   end
 
-  def test_model_match?_adds_suggestion_message
+  def test_model_match_adds_suggestion_message
     @host.models = [FakeModel.new("gpt-4o", "openai"), FakeModel.new("gpt-4o-mini", "openai")]
     @host.model_match?("gpt")
 
