@@ -47,7 +47,8 @@ module RubyCode
           @llm_bridge.toggle_plan_mode!(true)
           @state.activate_plan_mode!
           @state.add_message(:system,
-                             "Plan mode enabled. Describe what you want to build and the model will help you create a structured plan.")
+                             "Plan mode enabled. Describe what you want to build and the model " \
+                             "will help you create a structured plan.")
         end
 
         def disable_plan_mode(force:)
@@ -58,7 +59,8 @@ module RubyCode
 
           if !force && @state.has_unsaved_plan?
             @state.add_message(:system,
-                               "You have an unsaved plan. Use /plan save [filename] first, or /plan off --force to discard.")
+                               "You have an unsaved plan. Use /plan save [filename] first, " \
+                               "or /plan off --force to discard.")
             return
           end
 

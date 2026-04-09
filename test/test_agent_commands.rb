@@ -75,7 +75,6 @@ class TestAgentCommands < Minitest::Test
     assert_includes last_msg[:content], "/agent"
   end
 
-  private
 
   class MockAgentBridge
     attr_reader :agentic_mode

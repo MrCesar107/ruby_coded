@@ -21,24 +21,24 @@ class TestModelCommands < Minitest::Test
     assert_equal "some-model", @host.model_id("some-model")
   end
 
-  def test_find_model_match_returns_true_when_no_models
+  def test_model_match?_returns_true_when_no_models
     @host.models = []
-    assert @host.find_model_match("anything")
+    assert @host.model_match?("anything")
   end
 
-  def test_find_model_match_returns_true_when_model_found
+  def test_model_match?_returns_true_when_model_found
     @host.models = [FakeModel.new("gpt-4o", "openai")]
-    assert @host.find_model_match("gpt-4o")
+    assert @host.model_match?("gpt-4o")
   end
 
-  def test_find_model_match_returns_false_when_not_found
+  def test_model_match?_returns_false_when_not_found
     @host.models = [FakeModel.new("gpt-4o", "openai")]
-    refute @host.find_model_match("gpt-5")
+    refute @host.model_match?("gpt-5")
   end
 
-  def test_find_model_match_adds_suggestion_message
+  def test_model_match?_adds_suggestion_message
     @host.models = [FakeModel.new("gpt-4o", "openai"), FakeModel.new("gpt-4o-mini", "openai")]
-    @host.find_model_match("gpt")
+    @host.model_match?("gpt")
 
     last_msg = @state.messages_snapshot.last
     assert_includes last_msg[:content], "not found"
@@ -74,7 +74,7 @@ class TestModelCommands < Minitest::Test
   def test_switch_to_model_persists_config
     @host.switch_to_model("new-model")
 
-    assert_equal ["model", "new-model"], @user_config.last_set
+    assert_equal %w[model new-model], @user_config.last_set
   end
 
   def test_switch_to_model_adds_confirmation_message
@@ -138,7 +138,6 @@ class TestModelCommands < Minitest::Test
     assert_includes last_msg[:content], "not found"
   end
 
-  private
 
   FakeModel = Struct.new(:id, :provider)
 
@@ -171,7 +170,7 @@ class TestModelCommands < Minitest::Test
       @authenticated_models = []
     end
 
-    public :cmd_model, :find_model_match, :suggest_models, :switch_to_model,
+    public :cmd_model, :model_match?, :suggest_models, :switch_to_model,
            :open_model_selector, :model_id
 
     private

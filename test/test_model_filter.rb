@@ -178,8 +178,10 @@ class TestModelFilter < Minitest::Test
     ids = result.map(&:id)
 
     assert_includes ids, "gemini-flash-latest"
-    refute_includes ids, "gemini-2.0-flash-2025-01-01" if result.find { |m| m.provider == "gemini" && m.id == "gemini-2.0-flash-2025-01-01" }
-    assert result.any? { |m| m.provider == "vertexai" && m.id == "gemini-2.0-flash-2025-01-01" }
+    refute_includes ids, "gemini-2.0-flash-2025-01-01" if result.find do |m|
+      m.provider == "gemini" && m.id == "gemini-2.0-flash-2025-01-01"
+    end
+    assert(result.any? { |m| m.provider == "vertexai" && m.id == "gemini-2.0-flash-2025-01-01" })
   end
 
   def test_keeps_non_date_snapshot_ids_even_with_latest

@@ -84,7 +84,6 @@ class TestHistoryCommands < Minitest::Test
     assert_includes last_msg[:content], "10 input, 25 output (35 total)"
   end
 
-  private
 
   class HistoryCommandsHost
     include RubyCode::Chat::CommandHandler::HistoryCommands

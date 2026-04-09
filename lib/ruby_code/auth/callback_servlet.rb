@@ -19,7 +19,7 @@ module RubyCode
         @result_queue = result_queue
       end
 
-      def do_GET(request, response)
+      def do_GET(request, response) # rubocop:disable Naming/MethodName
         process_callback(request)
         response.status = 200
         response.content_type = "text/html"

@@ -153,7 +153,6 @@ class TestStateModelSelection < Minitest::Test
     assert_equal "claude", @state.selected_model.id
   end
 
-  private
 
   FakeModel = Struct.new(:id, :provider)
 end

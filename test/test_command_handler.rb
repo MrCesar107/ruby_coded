@@ -294,6 +294,8 @@ class TestCommandHandler < Minitest::Test
     assert_equal 1, @state.model_list.size
   end
 
+  FakeModel = Struct.new(:id, :provider)
+
   private
 
   def build_handler
@@ -313,12 +315,10 @@ class TestCommandHandler < Minitest::Test
     config.save
   end
 
-  def stub_models_by_provider(providers_map, &block)
+  def stub_models_by_provider(providers_map, &)
     fake_registry = FakeModelsRegistryByProvider.new(providers_map)
-    RubyLLM.stub(:models, fake_registry, &block)
+    RubyLLM.stub(:models, fake_registry, &)
   end
-
-  FakeModel = Struct.new(:id, :provider)
 
   class MockLLMBridge
     attr_reader :last_reset_model

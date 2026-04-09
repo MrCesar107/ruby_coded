@@ -358,7 +358,6 @@ class TestRendererChatPanel < Minitest::Test
     refute_includes banner, "%<version>s"
   end
 
-  private
 
   class ChatPanelHost
     include RubyCode::Chat::Renderer::ChatPanel
@@ -371,7 +370,7 @@ class TestRendererChatPanel < Minitest::Test
     public :chat_panel_text, :render_chat_panel, :render_input_panel, :cover_banner
   end
 
-  MockArea = Struct.new(:width, :height, keyword_init: true)
+  MockArea = Struct.new(:width, :height)
 
   class MockTui
     def paragraph(text:, block:, wrap: false, scroll: [0, 0])
@@ -382,7 +381,7 @@ class TestRendererChatPanel < Minitest::Test
       { title: title, borders: borders }
     end
 
-    def layout_split(area, direction:, constraints:)
+    def layout_split(area, direction:, constraints:) # rubocop:disable Lint/UnusedMethodArgument
       half = area.height / 2
       top = MockArea.new(width: area.width, height: half)
       bottom = MockArea.new(width: area.width, height: area.height - half)

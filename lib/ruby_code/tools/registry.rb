@@ -47,7 +47,7 @@ module RubyCode
       # Match on the short class-derived name against the last segment.
       def find_tool_class(tool_call_name)
         short = tool_call_name.split("--").last
-        TOOL_CLASSES.find { |k| tool_name_for(k) == short || tool_name_for(k) == tool_call_name }
+        TOOL_CLASSES.find { |k| [short, tool_call_name].include?(tool_name_for(k)) }
       end
 
       def tool_name_for(klass)

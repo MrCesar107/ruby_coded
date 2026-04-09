@@ -43,7 +43,7 @@ class TestRendererModelSelector < Minitest::Test
 
   def test_popup_layout_splits_vertically
     result = @host.popup_layout(:popup_area)
-    assert_equal [:search_area, :list_area], result
+    assert_equal %i[search_area list_area], result
   end
 
   def test_render_model_search_shows_filter_text
@@ -117,7 +117,6 @@ class TestRendererModelSelector < Minitest::Test
     assert_equal 3, frame.rendered.size
   end
 
-  private
 
   FakeModel = Struct.new(:id, :provider)
 
@@ -138,7 +137,7 @@ class TestRendererModelSelector < Minitest::Test
       { type: :paragraph, text: text, block: block }
     end
 
-    def list(items:, selected_index:, highlight_style:, highlight_symbol:, scroll_padding:, block:)
+    def list(items:, selected_index:, highlight_style:, highlight_symbol:, scroll_padding:, block:) # rubocop:disable Lint/UnusedMethodArgument
       { type: :list, items: items, selected_index: selected_index, block: block }
     end
 
@@ -154,11 +153,11 @@ class TestRendererModelSelector < Minitest::Test
       :clear_widget
     end
 
-    def layout_split(area, direction:, constraints:)
+    def layout_split(_area, direction:, constraints:) # rubocop:disable Lint/UnusedMethodArgument
       if constraints.size == 3
-        [:top, :center, :bottom]
+        %i[top center bottom]
       else
-        [:search_area, :list_area]
+        %i[search_area list_area]
       end
     end
 

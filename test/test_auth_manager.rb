@@ -113,7 +113,7 @@ class TestAuthManager < Minitest::Test
     manager = RubyCode::Auth::AuthManager.new
 
     configured_key = nil
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Minitest::Mock.new
       config.expect(:max_retries=, nil, [1])
       config.expect(:openai_api_key=, nil, ["sk-from-config"])
@@ -129,15 +129,15 @@ class TestAuthManager < Minitest::Test
 
   def test_configure_ruby_llm_sets_access_token_from_oauth_credentials
     store_credentials(:openai, {
-      "auth_method" => "oauth",
-      "access_token" => "eyJoauth",
-      "refresh_token" => "rt-test",
-      "expires_at" => "2026-12-31T00:00:00Z"
-    })
+                        "auth_method" => "oauth",
+                        "access_token" => "eyJoauth",
+                        "refresh_token" => "rt-test",
+                        "expires_at" => "2026-12-31T00:00:00Z"
+                      })
     manager = RubyCode::Auth::AuthManager.new
 
     configured_key = nil
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Minitest::Mock.new
       config.expect(:max_retries=, nil, [1])
       config.expect(:openai_api_key=, nil, ["eyJoauth"])
@@ -156,7 +156,7 @@ class TestAuthManager < Minitest::Test
     manager = RubyCode::Auth::AuthManager.new
 
     configured_key = nil
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Minitest::Mock.new
       config.expect(:max_retries=, nil, [1])
       config.expect(:anthropic_api_key=, nil, ["sk-ant-api03-test"])
@@ -176,7 +176,7 @@ class TestAuthManager < Minitest::Test
     manager = RubyCode::Auth::AuthManager.new
 
     keys_set = {}
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Object.new
       config.define_singleton_method(:max_retries=) { |_v| nil }
       config.define_singleton_method(:openai_api_key=) { |v| keys_set[:openai] = v }
@@ -193,7 +193,7 @@ class TestAuthManager < Minitest::Test
   def test_configure_ruby_llm_skips_unconfigured_providers
     manager = RubyCode::Auth::AuthManager.new
 
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Object.new
       config.define_singleton_method(:max_retries=) { |_v| nil }
       block.call(config)
@@ -259,7 +259,7 @@ class TestAuthManager < Minitest::Test
 
     configured_key = nil
     RubyCode::Strategies::OAuthStrategy.stub(:new, strategy_mock) do
-      RubyLLM.stub(:configure, ->(&block) {
+      RubyLLM.stub(:configure, lambda { |&block|
         config = Object.new
         config.define_singleton_method(:max_retries=) { |_v| nil }
         config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
@@ -285,7 +285,7 @@ class TestAuthManager < Minitest::Test
     manager = RubyCode::Auth::AuthManager.new
 
     configured_key = nil
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Object.new
       config.define_singleton_method(:max_retries=) { |_v| nil }
       config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
@@ -312,7 +312,7 @@ class TestAuthManager < Minitest::Test
 
     configured_key = nil
     RubyCode::Strategies::OAuthStrategy.stub(:new, failing_strategy) do
-      RubyLLM.stub(:configure, ->(&block) {
+      RubyLLM.stub(:configure, lambda { |&block|
         config = Object.new
         config.define_singleton_method(:max_retries=) { |_v| nil }
         config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
@@ -330,7 +330,7 @@ class TestAuthManager < Minitest::Test
     manager = RubyCode::Auth::AuthManager.new
 
     configured_key = nil
-    RubyLLM.stub(:configure, ->(&block) {
+    RubyLLM.stub(:configure, lambda { |&block|
       config = Object.new
       config.define_singleton_method(:max_retries=) { |_v| nil }
       config.define_singleton_method(:openai_api_key=) { |v| configured_key = v }
@@ -366,12 +366,12 @@ class TestAuthManager < Minitest::Test
 
   private
 
-  def stub_ruby_llm_configure(&block)
-    fake_configure = ->(&config_block) {
+  def stub_ruby_llm_configure(&)
+    fake_configure = lambda { |&config_block|
       config = Struct.new(:openai_api_key, :anthropic_api_key, :max_retries).new
-      config_block.call(config) if config_block
+      config_block&.call(config)
     }
-    RubyLLM.stub(:configure, fake_configure, &block)
+    RubyLLM.stub(:configure, fake_configure, &)
   end
 
   def build_stub_prompt(provider: nil, method: nil)

@@ -14,14 +14,14 @@ module RubyCode
 
           name = rest.strip
           return open_model_selector(show_all: true) if name == "--all"
-          return unless find_model_match(name)
+          return unless model_match?(name)
 
           switch_to_model(name)
         rescue StandardError => e
           @state.add_message(:system, "Failed to switch model: #{e.message}")
         end
 
-        def find_model_match(name)
+        def model_match?(name)
           models = fetch_chat_models
           return true unless models.any?
           return true if models.find { |m| model_id(m) == name }
@@ -50,7 +50,8 @@ module RubyCode
 
           if models.empty?
             @state.add_message(:system,
-                               "Current model: #{@state.model}. No available models found for your authenticated providers.")
+                               "Current model: #{@state.model}. " \
+                               "No available models found for your authenticated providers.")
             return
           end
 

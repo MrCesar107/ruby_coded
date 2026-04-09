@@ -159,7 +159,7 @@ class TestCommandCompletion < Minitest::Test
     @state.append_to_input("/")
     @state.command_completion_down
     @state.command_completion_down
-    assert @state.command_completion_index > 0
+    assert @state.command_completion_index.positive?
 
     @state.append_to_input("h")
     assert_equal 0, @state.command_completion_index
@@ -169,7 +169,7 @@ class TestCommandCompletion < Minitest::Test
     @state.append_to_input("/")
     @state.command_completion_down
     @state.command_completion_down
-    assert @state.command_completion_index > 0
+    assert @state.command_completion_index.positive?
 
     @state.delete_last_char
     assert_equal 0, @state.command_completion_index

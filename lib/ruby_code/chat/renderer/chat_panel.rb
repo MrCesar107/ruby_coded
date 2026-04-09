@@ -150,7 +150,7 @@ module RubyCode
         end
 
         def strip_think_tags(content)
-          _, result, _ = parse_thinking_content(content)
+          _, result, = parse_thinking_content(content)
           result
         end
 
@@ -163,7 +163,7 @@ module RubyCode
         def format_thinking_message(msg)
           case msg[:role]
           when :assistant
-            msg[:content].gsub(/<\/?think>/, "")
+            msg[:content].gsub(%r{</?think>}, "")
           when :tool_call
             ">> #{msg[:content]}"
           when :tool_pending
@@ -182,8 +182,8 @@ module RubyCode
         def chat_panel_title
           title = @state.model.to_s
           title += " [agent]" if @state.respond_to?(:mode) && @state.streaming? == false &&
-                                  defined?(@llm_bridge) && @llm_bridge&.respond_to?(:agentic_mode) &&
-                                  @llm_bridge&.agentic_mode
+                                 defined?(@llm_bridge) && @llm_bridge.respond_to?(:agentic_mode) &&
+                                 @llm_bridge.agentic_mode
           title += " [plan]" if @state.respond_to?(:plan_mode_active?) && @state.plan_mode_active?
           title
         end

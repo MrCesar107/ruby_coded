@@ -113,9 +113,7 @@ class TestInitializer < Minitest::Test
         "model" => model
       }
     }
-    if with_provider
-      config["providers"] = { "openai" => { "auth_method" => "api_key", "key" => "sk-test" } }
-    end
+    config["providers"] = { "openai" => { "auth_method" => "api_key", "key" => "sk-test" } } if with_provider
     File.write(".config.yaml", config.to_yaml)
   end
 
@@ -126,11 +124,11 @@ class TestInitializer < Minitest::Test
     stub
   end
 
-  def stub_chat_app(&block)
+  def stub_chat_app(&)
     app_mock = Object.new
     app_mock.define_singleton_method(:run) { nil }
 
-    RubyCode::Chat::App.stub(:new, app_mock, &block)
+    RubyCode::Chat::App.stub(:new, app_mock, &)
   end
 
   def stub_auth_manager(&block)

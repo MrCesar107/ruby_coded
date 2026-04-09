@@ -15,7 +15,7 @@ module RubyCode
 
       def initialize
         @result_queue = Queue.new
-        @server = WEBrick::HTTPServer.new(Port: PORT, Logger: WEBrick::Log.new("/dev/null"), AccessLog: [])
+        @server = WEBrick::HTTPServer.new(Port: PORT, Logger: WEBrick::Log.new(File::NULL), AccessLog: [])
         @server.mount "/auth/callback", CallbackServlet, @result_queue
       end
 

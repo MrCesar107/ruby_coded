@@ -8,7 +8,7 @@ module RubyCode
       module RendererExtension
         private
 
-        def render_command_completer(frame, chat_area, input_area)
+        def render_command_completer(frame, chat_area, _input_area)
           return unless @state.command_completion_active?
 
           suggestions = @state.command_suggestions
