@@ -3,6 +3,8 @@
 require "ruby_llm"
 require_relative "../tools/registry"
 require_relative "../tools/system_prompt"
+require_relative "../tools/plan_system_prompt"
+require_relative "plan_clarification_parser"
 
 module RubyCode
   module Chat
@@ -11,7 +13,7 @@ module RubyCode
       MAX_RATE_LIMIT_RETRIES = 2
       RATE_LIMIT_BASE_DELAY = 2
 
-      attr_reader :agentic_mode
+      attr_reader :agentic_mode, :plan_mode, :project_root
 
       def initialize(state, project_root: Dir.pwd)
         @state = state
@@ -19,6 +21,7 @@ module RubyCode
         @cancel_requested = false
         @project_root = project_root
         @agentic_mode = false
+        @plan_mode = false
         @tool_registry = Tools::Registry.new(project_root: @project_root)
         reset_chat!(@state.model)
       end
@@ -27,12 +30,26 @@ module RubyCode
         @chat_mutex.synchronize do
           @chat = RubyLLM.chat(model: model_name)
           configure_agentic!(@chat) if @agentic_mode
+          configure_plan!(@chat) if @plan_mode
         end
       end
 
       def toggle_agentic_mode!(enabled)
         @agentic_mode = enabled
+        if enabled && @plan_mode
+          @plan_mode = false
+          @state.deactivate_plan_mode!
+        end
         @state.disable_auto_approve! unless enabled
+        reset_chat!(@state.model)
+      end
+
+      def toggle_plan_mode!(enabled)
+        @plan_mode = enabled
+        if enabled && @agentic_mode
+          @agentic_mode = false
+          @state.disable_auto_approve!
+        end
         reset_chat!(@state.model)
       end
 
@@ -41,6 +58,7 @@ module RubyCode
         Thread.new do
           response = attempt_with_retries(chat, input)
           update_response_tokens(response)
+          post_process_plan_response if @plan_mode && !@cancel_requested
         ensure
           @state.streaming = false
         end
@@ -190,6 +208,28 @@ module RubyCode
 
       def generic_api_error_message(error)
         "No se pudo obtener respuesta del modelo: #{error.message}"
+      end
+
+      def configure_plan!(chat)
+        chat.with_instructions(Tools::PlanSystemPrompt.build(project_root: @project_root))
+      end
+
+      def post_process_plan_response
+        last_msg = @state.messages_snapshot.last
+        return unless last_msg && last_msg[:role] == :assistant
+
+        content = last_msg[:content]
+        if PlanClarificationParser.clarification?(content)
+          parsed = PlanClarificationParser.parse(content)
+          return unless parsed
+
+          stripped = PlanClarificationParser.strip_clarification(content)
+          @state.reset_last_assistant_content
+          @state.append_to_last_message(stripped) unless stripped.empty?
+          @state.enter_plan_clarification!(parsed[:question], parsed[:options])
+        else
+          @state.update_current_plan!(content)
+        end
       end
     end
   end

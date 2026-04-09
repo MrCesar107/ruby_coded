@@ -5,6 +5,7 @@ require "ruby_llm"
 require_relative "command_handler/model_commands"
 require_relative "command_handler/history_commands"
 require_relative "command_handler/agent_commands"
+require_relative "command_handler/plan_commands"
 
 module RubyCode
   module Chat
@@ -15,6 +16,7 @@ module RubyCode
       include ModelCommands
       include HistoryCommands
       include AgentCommands
+      include PlanCommands
 
       BASE_COMMANDS = {
         "/help" => :cmd_help,
@@ -24,7 +26,8 @@ module RubyCode
         "/model" => :cmd_model,
         "/history" => :cmd_history,
         "/tokens" => :cmd_tokens,
-        "/agent" => :cmd_agent
+        "/agent" => :cmd_agent,
+        "/plan" => :cmd_plan
       }.freeze
 
       HELP_TEXT = File.read(File.join(__dir__, "help.txt")).freeze

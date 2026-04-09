@@ -12,6 +12,7 @@ module RubyCode
           "/history" => "Show conversation summary",
           "/tokens" => "Show token usage",
           "/agent" => "Toggle agent mode (on/off)",
+          "/plan" => "Toggle plan mode (on/off/save)",
           "/exit" => "Exit the chat",
           "/quit" => "Exit the chat"
         }.freeze

@@ -9,9 +9,20 @@ Available commands:
   /agent             Show agent mode status
   /agent on          Enable agent mode (tools for file operations)
   /agent off         Disable agent mode (chat only)
+  /plan              Show plan mode status
+  /plan on           Enable plan mode (structured development planning)
+  /plan off          Disable plan mode (warns if unsaved plan)
+  /plan off --force  Disable plan mode discarding unsaved plan
+  /plan save [file]  Save current plan to a markdown file
   /exit, /quit       Exit the chat
 
 Tool confirmations (agent mode):
   [y] / Enter        Approve the current tool call
   [n] / Esc          Reject the current tool call
   [a]                Approve current and all future tool calls (yes to all)
+
+Plan clarification (plan mode):
+  [Up/Down]          Navigate options
+  [Enter]            Select highlighted option / send custom response
+  [Tab]              Switch between options and free text input
+  [Esc]              Skip clarification question

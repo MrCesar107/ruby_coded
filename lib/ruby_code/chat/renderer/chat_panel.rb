@@ -184,6 +184,7 @@ module RubyCode
           title += " [agent]" if @state.respond_to?(:mode) && @state.streaming? == false &&
                                   defined?(@llm_bridge) && @llm_bridge&.respond_to?(:agentic_mode) &&
                                   @llm_bridge&.agentic_mode
+          title += " [plan]" if @state.respond_to?(:plan_mode_active?) && @state.plan_mode_active?
           title
         end
 

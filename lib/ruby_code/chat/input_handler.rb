@@ -17,6 +17,8 @@ module RubyCode
 
         if @state.awaiting_tool_confirmation?
           handle_tool_confirmation_mode(event)
+        elsif @state.plan_clarification?
+          handle_plan_clarification_mode(event)
         elsif @state.model_select?
           handle_model_select_mode(event)
         elsif @state.streaming?
@@ -37,6 +39,46 @@ module RubyCode
         return :tool_rejected if char == "n"
         return :tool_approved_all if char == "a"
 
+        nil
+      end
+
+      def handle_plan_clarification_mode(event)
+        return :quit if event.ctrl_c?
+        return :plan_clarification_skip if event.esc?
+        return toggle_clarification_mode if event.tab?
+
+        if @state.clarification_input_mode == :custom
+          handle_clarification_custom_input(event)
+        else
+          handle_clarification_options_input(event)
+        end
+      end
+
+      def handle_clarification_options_input(event)
+        if event.up?
+          @state.clarification_up
+        elsif event.down?
+          @state.clarification_down
+        elsif event.enter?
+          return :plan_clarification_selected
+        end
+        nil
+      end
+
+      def handle_clarification_custom_input(event)
+        if event.enter?
+          return :plan_clarification_custom unless @state.clarification_custom_input.strip.empty?
+        elsif event.backspace?
+          @state.delete_last_clarification_char
+        else
+          char = event.to_s
+          @state.append_to_clarification_input(char) unless char.empty? || event.ctrl? || event.alt?
+        end
+        nil
+      end
+
+      def toggle_clarification_mode
+        @state.toggle_clarification_input_mode!
         nil
       end
 

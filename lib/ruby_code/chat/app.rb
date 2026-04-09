@@ -84,6 +84,12 @@ module RubyCode
         when :tool_approved then @llm_bridge.approve_tool!
         when :tool_approved_all then @llm_bridge.approve_all_tools!
         when :tool_rejected then @llm_bridge.reject_tool!
+        when :plan_clarification_selected
+          handle_plan_clarification_response(@state.selected_clarification_option)
+        when :plan_clarification_custom
+          handle_plan_clarification_response(@state.clarification_custom_input.dup)
+        when :plan_clarification_skip
+          @state.exit_plan_clarification!
         when :scroll_up, :scroll_down, :scroll_top, :scroll_bottom then handle_scroll(action)
         end
       end
@@ -97,6 +103,12 @@ module RubyCode
           @state.add_message(:user, input)
           @llm_bridge.send_async(input)
         end
+      end
+
+      def handle_plan_clarification_response(response)
+        @state.exit_plan_clarification!
+        @state.add_message(:user, response)
+        @llm_bridge.send_async(response)
       end
 
       def handle_scroll(action)
