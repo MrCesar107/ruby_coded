@@ -15,10 +15,16 @@ module RubyCode
         - The user will be asked to confirm destructive operations (write, edit, delete).
         - When listing directories, start with the project root to orient yourself.
         - Be concise in your explanations but thorough in your actions.
+
+        Efficiency:
+        - You have a maximum of %<max_tool_rounds>d tool calls per request. Plan your work to stay within this limit.
+        - Batch related reads together when possible instead of reading files one at a time.
+        - Use write_file for new files and edit_file for targeted changes — avoid rewriting entire files unnecessarily.
+        - If you receive a warning about approaching the limit, wrap up the most critical changes first.
       PROMPT
 
-      def self.build(project_root:)
-        format(TEMPLATE, project_root: project_root)
+      def self.build(project_root:, max_tool_rounds: 50)
+        format(TEMPLATE, project_root: project_root, max_tool_rounds: max_tool_rounds)
       end
     end
   end

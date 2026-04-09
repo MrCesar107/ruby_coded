@@ -14,7 +14,8 @@ module RubyCode
     class LLMBridge
       MAX_RATE_LIMIT_RETRIES = 2
       RATE_LIMIT_BASE_DELAY = 2
-      MAX_TOOL_ROUNDS = 25
+      MAX_TOOL_ROUNDS = 50
+      TOOL_ROUNDS_WARNING_THRESHOLD = 0.8
       MAX_TOOL_RESULT_CHARS = 10_000
 
       attr_reader :agentic_mode, :plan_mode, :project_root
@@ -91,7 +92,7 @@ module RubyCode
       def configure_agentic!(chat)
         tools = @tool_registry.build_tools
         chat.with_tools(*tools)
-        chat.with_instructions(Tools::SystemPrompt.build(project_root: @project_root))
+        chat.with_instructions(Tools::SystemPrompt.build(project_root: @project_root, max_tool_rounds: MAX_TOOL_ROUNDS))
 
         chat.on_tool_call do |tool_call|
           handle_tool_call(tool_call)
@@ -110,6 +111,7 @@ module RubyCode
           raise Tools::AgentIterationLimitError,
                 "Reached maximum of #{MAX_TOOL_ROUNDS} tool calls. Use /agent on to start a new session."
         end
+        warn_approaching_limit
 
         display_name = short_tool_name(tool_call.name)
         risk = @tool_registry.risk_level_for(tool_call.name)
@@ -152,6 +154,16 @@ module RubyCode
           text = "#{text[0, MAX_TOOL_RESULT_CHARS]}\n... (truncated, #{text.length} total characters)"
         end
         @state.add_message(:tool_result, text)
+      end
+
+      def warn_approaching_limit
+        warning_at = (MAX_TOOL_ROUNDS * TOOL_ROUNDS_WARNING_THRESHOLD).to_i
+        return unless @tool_call_count == warning_at
+
+        remaining = MAX_TOOL_ROUNDS - @tool_call_count
+        @state.add_message(:system,
+                           "Approaching tool call limit: #{remaining} calls remaining. " \
+                           "Prioritize completing the most important work.")
       end
 
       # "ruby_code--tools--read_file_tool" → "read_file_tool"
