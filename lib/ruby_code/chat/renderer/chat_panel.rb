@@ -249,13 +249,22 @@ module RubyCode
           end
         end
 
+        INPUT_PREFIX = "ruby_code> "
+
         def render_input_panel(frame, area)
-          text = "ruby_code> #{@state.input_buffer}"
+          text = "#{INPUT_PREFIX}#{@state.input_buffer}"
           widget = @tui.paragraph(
             text: text,
             block: @tui.block(borders: [:all])
           )
           frame.render_widget(widget, area)
+          render_input_cursor(frame, area) unless @state.streaming? || @state.model_select? || @state.plan_clarification?
+        end
+
+        def render_input_cursor(frame, area)
+          cursor_x = area.x + 1 + INPUT_PREFIX.length + @state.cursor_position
+          cursor_y = area.y + 1
+          frame.set_cursor_position(cursor_x, cursor_y)
         end
 
         def cover_banner

@@ -136,6 +136,12 @@ class TestCommandCompletion < Minitest::Test
     assert_equal "/model", @state.input_buffer
   end
 
+  def test_accept_updates_cursor_position
+    @state.append_to_input("/mo")
+    @state.accept_command_completion!
+    assert_equal "/model".length, @state.cursor_position
+  end
+
   def test_accept_resets_index
     @state.append_to_input("/")
     @state.command_completion_down

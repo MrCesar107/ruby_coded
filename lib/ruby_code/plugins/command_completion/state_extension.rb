@@ -68,6 +68,7 @@ module RubyCode
           cmd, = suggestion
           @input_buffer.clear
           @input_buffer << cmd
+          @cursor_position = @input_buffer.length
           @command_completion_index = 0
         end
 

@@ -145,8 +145,10 @@ module RubyCode
       def scroll_or_append(event)
         return :scroll_up if event.up? || event.page_up?
         return :scroll_down if event.down? || event.page_down?
-        return :scroll_top if event.home?
-        return :scroll_bottom if event.end?
+        return move_cursor_left if event.left?
+        return move_cursor_right if event.right?
+        return move_cursor_home if event.home?
+        return move_cursor_end if event.end?
 
         append_character(event)
       end
@@ -164,6 +166,26 @@ module RubyCode
 
       def clear_input
         @state.clear_input!
+        nil
+      end
+
+      def move_cursor_left
+        @state.move_cursor_left
+        nil
+      end
+
+      def move_cursor_right
+        @state.move_cursor_right
+        nil
+      end
+
+      def move_cursor_home
+        @state.move_cursor_to_start
+        nil
+      end
+
+      def move_cursor_end
+        @state.move_cursor_to_end
         nil
       end
 

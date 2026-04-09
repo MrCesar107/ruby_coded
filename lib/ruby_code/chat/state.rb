@@ -16,7 +16,7 @@ module RubyCode
       include ToolConfirmation
       include PlanTracking
 
-      attr_reader :input_buffer, :messages, :scroll_offset,
+      attr_reader :input_buffer, :cursor_position, :messages, :scroll_offset,
                   :mode, :model_list, :model_select_index, :model_select_filter,
                   :streaming
       attr_accessor :model, :should_quit
@@ -27,6 +27,7 @@ module RubyCode
         @model = model
         # String.new: literals like "" are frozen under frozen_string_literal
         @input_buffer = String.new
+        @cursor_position = 0
         @messages = []
         @streaming = false
         @should_quit = false
@@ -81,25 +82,59 @@ module RubyCode
       end
 
       def append_to_input(text)
-        @input_buffer << text
+        @input_buffer.insert(@cursor_position, text)
+        @cursor_position += text.length
         mark_dirty!
         reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
 
       def delete_last_char
-        @input_buffer.chop!
+        return if @cursor_position <= 0
+
+        @input_buffer.slice!(@cursor_position - 1)
+        @cursor_position -= 1
         mark_dirty!
         reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
 
+      def move_cursor_left
+        return if @cursor_position <= 0
+
+        @cursor_position -= 1
+        mark_dirty!
+      end
+
+      def move_cursor_right
+        return if @cursor_position >= @input_buffer.length
+
+        @cursor_position += 1
+        mark_dirty!
+      end
+
+      def move_cursor_to_start
+        return if @cursor_position == 0
+
+        @cursor_position = 0
+        mark_dirty!
+      end
+
+      def move_cursor_to_end
+        return if @cursor_position == @input_buffer.length
+
+        @cursor_position = @input_buffer.length
+        mark_dirty!
+      end
+
       def clear_input!
         @input_buffer.clear
+        @cursor_position = 0
         mark_dirty!
       end
 
       def consume_input!
         input = @input_buffer.dup
         @input_buffer.clear
+        @cursor_position = 0
         input
       end
 

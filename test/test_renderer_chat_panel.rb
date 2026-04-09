@@ -335,7 +335,7 @@ class TestRendererChatPanel < Minitest::Test
   def test_render_input_panel_shows_prompt_with_buffer
     @state.append_to_input("hello world")
     frame = MockFrame.new
-    area = :input_area
+    area = MockArea.new(width: 80, height: 3)
 
     @host.render_input_panel(frame, area)
 
@@ -345,11 +345,59 @@ class TestRendererChatPanel < Minitest::Test
 
   def test_render_input_panel_shows_empty_prompt
     frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 3)
 
-    @host.render_input_panel(frame, :input_area)
+    @host.render_input_panel(frame, area)
 
     widget, = frame.rendered.first
     assert_equal "ruby_code> ", widget[:text]
+  end
+
+  def test_render_input_panel_sets_cursor_at_end_of_input
+    @state.append_to_input("hello")
+    frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 3, x: 0, y: 21)
+
+    @host.render_input_panel(frame, area)
+
+    prefix_len = "ruby_code> ".length
+    assert_equal 0 + 1 + prefix_len + 5, frame.cursor_x
+    assert_equal 21 + 1, frame.cursor_y
+  end
+
+  def test_render_input_panel_sets_cursor_at_beginning_when_empty
+    frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 3, x: 0, y: 21)
+
+    @host.render_input_panel(frame, area)
+
+    prefix_len = "ruby_code> ".length
+    assert_equal 0 + 1 + prefix_len + 0, frame.cursor_x
+    assert_equal 21 + 1, frame.cursor_y
+  end
+
+  def test_render_input_panel_cursor_reflects_mid_buffer_position
+    @state.append_to_input("hello")
+    @state.move_cursor_left
+    @state.move_cursor_left
+    frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 3, x: 0, y: 21)
+
+    @host.render_input_panel(frame, area)
+
+    prefix_len = "ruby_code> ".length
+    assert_equal 0 + 1 + prefix_len + 3, frame.cursor_x
+  end
+
+  def test_render_input_panel_no_cursor_during_streaming
+    @state.streaming = true
+    frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 3, x: 0, y: 21)
+
+    @host.render_input_panel(frame, area)
+
+    assert_nil frame.cursor_x
+    assert_nil frame.cursor_y
   end
 
   def test_cover_banner_includes_version
@@ -370,7 +418,11 @@ class TestRendererChatPanel < Minitest::Test
     public :chat_panel_text, :render_chat_panel, :render_input_panel, :cover_banner
   end
 
-  MockArea = Struct.new(:width, :height)
+  MockArea = Struct.new(:width, :height, :x, :y, keyword_init: true) do
+    def initialize(width:, height:, x: 0, y: 0)
+      super(width: width, height: height, x: x, y: y)
+    end
+  end
 
   class MockTui
     def paragraph(text:, block:, wrap: false, scroll: [0, 0])
@@ -398,14 +450,21 @@ class TestRendererChatPanel < Minitest::Test
   end
 
   class MockFrame
-    attr_reader :rendered
+    attr_reader :rendered, :cursor_x, :cursor_y
 
     def initialize
       @rendered = []
+      @cursor_x = nil
+      @cursor_y = nil
     end
 
     def render_widget(widget, area)
       @rendered << [widget, area]
+    end
+
+    def set_cursor_position(x, y)
+      @cursor_x = x
+      @cursor_y = y
     end
   end
 end
