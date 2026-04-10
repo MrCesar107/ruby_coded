@@ -35,8 +35,7 @@ module RubyCode
       def reset_chat!(model_name)
         @chat_mutex.synchronize do
           @chat = RubyLLM.chat(model: model_name)
-          configure_agentic!(@chat) if @agentic_mode
-          configure_plan!(@chat) if @plan_mode
+          apply_mode_config!(@chat)
         end
       end
 
@@ -47,7 +46,7 @@ module RubyCode
           @state.deactivate_plan_mode!
         end
         @state.disable_auto_approve! unless enabled
-        reset_chat!(@state.model)
+        reconfigure_chat!
       end
 
       def reset_agent_session!
@@ -62,7 +61,7 @@ module RubyCode
           @agentic_mode = false
           @state.disable_auto_approve!
         end
-        reset_chat!(@state.model)
+        reconfigure_chat!
       end
 
       def send_async(input)
@@ -98,9 +97,25 @@ module RubyCode
 
       private
 
+      def reconfigure_chat!
+        @chat_mutex.synchronize do
+          apply_mode_config!(@chat)
+        end
+      end
+
+      def apply_mode_config!(chat)
+        if @agentic_mode
+          configure_agentic!(chat)
+        elsif @plan_mode
+          configure_plan!(chat)
+        else
+          chat.with_tools(replace: true)
+        end
+      end
+
       def configure_agentic!(chat)
         tools = @tool_registry.build_tools
-        chat.with_tools(*tools)
+        chat.with_tools(*tools, replace: true)
         chat.with_instructions(Tools::SystemPrompt.build(
                                  project_root: @project_root,
                                  max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
@@ -286,7 +301,7 @@ module RubyCode
 
       def configure_plan!(chat)
         readonly_tools = @tool_registry.build_readonly_tools
-        chat.with_tools(*readonly_tools)
+        chat.with_tools(*readonly_tools, replace: true)
         chat.with_instructions(Tools::PlanSystemPrompt.build(project_root: @project_root))
 
         chat.on_tool_call do |tool_call|

@@ -99,6 +99,62 @@ class TestLLMBridge < Minitest::Test
     assert_equal "Success", last_msg[:content]
   end
 
+  def test_toggle_agentic_mode_preserves_chat_history
+    chat = build_configurable_chat
+    chat.messages << { role: :user, content: "describe my problem" }
+    chat.messages << { role: :assistant, content: "Here is your plan..." }
+
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    bridge.toggle_agentic_mode!(true)
+
+    assert_equal 2, chat.messages.size
+    assert_equal "describe my problem", chat.messages[0][:content]
+  end
+
+  def test_toggle_plan_mode_preserves_chat_history
+    chat = build_configurable_chat
+    chat.messages << { role: :user, content: "hello" }
+    chat.messages << { role: :assistant, content: "hi there" }
+
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    bridge.toggle_plan_mode!(true)
+
+    assert_equal 2, chat.messages.size
+    assert_equal "hello", chat.messages[0][:content]
+  end
+
+  def test_switch_from_plan_to_agent_preserves_chat_history
+    chat = build_configurable_chat
+    chat.messages << { role: :user, content: "plan this feature" }
+    chat.messages << { role: :assistant, content: "Here is the plan..." }
+
+    bridge = build_bridge_with_configurable_chat(chat)
+    bridge.toggle_plan_mode!(true)
+
+    chat.messages << { role: :user, content: "implement the plan" }
+
+    bridge.toggle_agentic_mode!(true)
+
+    assert_equal 3, chat.messages.size
+    assert_equal "Here is the plan...", chat.messages[1][:content]
+  end
+
+  def test_reset_chat_creates_new_history
+    chat = build_configurable_chat
+    chat.messages << { role: :user, content: "old message" }
+
+    new_chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    RubyLLM.stub(:chat, new_chat) do
+      bridge.reset_chat!("test-model")
+    end
+
+    assert_empty new_chat.messages
+  end
+
   private
 
   def rate_limit_error
@@ -122,6 +178,8 @@ class TestLLMBridge < Minitest::Test
 
     chat = Object.new
 
+    chat.define_singleton_method(:with_tools) { |*_args, **_kw| chat }
+
     chat.define_singleton_method(:ask) do |_input, &block|
       resp = responses[call_index]
       call_index += 1
@@ -141,6 +199,23 @@ class TestLLMBridge < Minitest::Test
     end
 
     chat
+  end
+
+  def build_configurable_chat
+    chat = Object.new
+    msgs = []
+    chat.define_singleton_method(:messages) { msgs }
+    chat.define_singleton_method(:with_tools) { |*_args, **_kw| chat }
+    chat.define_singleton_method(:with_instructions) { |*_args| chat }
+    chat.define_singleton_method(:on_tool_call) { |&_blk| chat }
+    chat.define_singleton_method(:on_tool_result) { |&_blk| chat }
+    chat
+  end
+
+  def build_bridge_with_configurable_chat(chat)
+    RubyLLM.stub(:chat, chat) do
+      return RubyCode::Chat::LLMBridge.new(@state)
+    end
   end
 
   def mock_response(content:, input_tokens:, output_tokens:)
