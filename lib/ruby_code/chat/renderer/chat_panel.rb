@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "unicode/display_width"
 require_relative "../../initializer/cover"
 
 module RubyCode
@@ -260,8 +261,12 @@ module RubyCode
           return 1 if width <= 0 || text.empty?
 
           text.split("\n", -1).sum do |line|
-            line.empty? ? 1 : (line.length.to_f / width).ceil
+            line.empty? ? 1 : (display_width(line).to_f / width).ceil
           end
+        end
+
+        def display_width(line)
+          Unicode::DisplayWidth.of(line)
         end
 
         INPUT_PREFIX = "ruby_code> "
