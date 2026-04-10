@@ -272,17 +272,34 @@ module RubyCode
         INPUT_PREFIX = "ruby_code> "
 
         def render_input_panel(frame, area)
-          text = "#{INPUT_PREFIX}#{@state.input_buffer}"
+          # Inner width = area minus left and right borders
+          inner_width = [area.width - 2, 0].max
+          prefix_len = INPUT_PREFIX.length
+          # How many characters of the input buffer fit after the prefix
+          text_visible_width = [inner_width - prefix_len, 0].max
+
+          # Let the state know the visible width so it can keep the
+          # scroll offset in sync when the terminal is resized.
+          @state.update_input_visible_width(text_visible_width)
+          @state.update_input_scroll_offset
+
+          offset = @state.input_scroll_offset
+          visible_slice = @state.input_buffer[offset, text_visible_width] || ""
+
+          # Show a left-truncation indicator when scrolled
+          display_prefix = offset.positive? ? "…#{INPUT_PREFIX[1..]}" : INPUT_PREFIX
+          text = "#{display_prefix}#{visible_slice}"
+
           widget = @tui.paragraph(
             text: text,
             block: @tui.block(borders: [:all])
           )
           frame.render_widget(widget, area)
-          render_input_cursor(frame, area) unless @state.streaming? || @state.model_select? || @state.plan_clarification?
+          render_input_cursor(frame, area, prefix_len, offset) unless @state.streaming? || @state.model_select? || @state.plan_clarification?
         end
 
-        def render_input_cursor(frame, area)
-          cursor_x = area.x + 1 + INPUT_PREFIX.length + @state.cursor_position
+        def render_input_cursor(frame, area, prefix_len, scroll_offset)
+          cursor_x = area.x + 1 + prefix_len + (@state.cursor_position - scroll_offset)
           cursor_y = area.y + 1
           frame.set_cursor_position(cursor_x, cursor_y)
         end

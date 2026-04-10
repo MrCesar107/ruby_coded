@@ -16,7 +16,7 @@ module RubyCode
       include ToolConfirmation
       include PlanTracking
 
-      attr_reader :input_buffer, :cursor_position, :messages, :scroll_offset,
+      attr_reader :input_buffer, :cursor_position, :input_scroll_offset, :messages, :scroll_offset,
                   :mode, :model_list, :model_select_index, :model_select_filter,
                   :streaming, :mutex
       attr_accessor :model, :should_quit
@@ -28,6 +28,7 @@ module RubyCode
         # String.new: literals like "" are frozen under frozen_string_literal
         @input_buffer = String.new
         @cursor_position = 0
+        @input_scroll_offset = 0
         @messages = []
         @streaming = false
         @should_quit = false
@@ -82,9 +83,31 @@ module RubyCode
         @mutex.synchronize { @dirty = true }
       end
 
+      # Updates the horizontal scroll offset of the input area so the
+      # cursor is always visible.  Call this after every cursor / buffer
+      # change.  +visible_width+ is set by the renderer each frame via
+      # +update_input_visible_width+.
+      def update_input_scroll_offset
+        visible = @input_visible_width || 0
+        return if visible <= 0
+
+        if @cursor_position < @input_scroll_offset
+          @input_scroll_offset = @cursor_position
+        elsif @cursor_position >= @input_scroll_offset + visible
+          @input_scroll_offset = @cursor_position - visible + 1
+        end
+      end
+
+      # Called by the renderer so the state knows how many characters
+      # fit on screen (inner width minus the prompt prefix).
+      def update_input_visible_width(width)
+        @input_visible_width = width
+      end
+
       def append_to_input(text)
         @input_buffer.insert(@cursor_position, text)
         @cursor_position += text.length
+        update_input_scroll_offset
         mark_dirty!
         reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
@@ -94,6 +117,7 @@ module RubyCode
 
         @input_buffer.slice!(@cursor_position - 1)
         @cursor_position -= 1
+        update_input_scroll_offset
         mark_dirty!
         reset_command_completion_index if respond_to?(:reset_command_completion_index, true)
       end
@@ -102,6 +126,7 @@ module RubyCode
         return if @cursor_position <= 0
 
         @cursor_position -= 1
+        update_input_scroll_offset
         mark_dirty!
       end
 
@@ -109,6 +134,7 @@ module RubyCode
         return if @cursor_position >= @input_buffer.length
 
         @cursor_position += 1
+        update_input_scroll_offset
         mark_dirty!
       end
 
@@ -116,6 +142,7 @@ module RubyCode
         return if @cursor_position == 0
 
         @cursor_position = 0
+        update_input_scroll_offset
         mark_dirty!
       end
 
@@ -123,12 +150,14 @@ module RubyCode
         return if @cursor_position == @input_buffer.length
 
         @cursor_position = @input_buffer.length
+        update_input_scroll_offset
         mark_dirty!
       end
 
       def clear_input!
         @input_buffer.clear
         @cursor_position = 0
+        @input_scroll_offset = 0
         mark_dirty!
       end
 
@@ -136,6 +165,7 @@ module RubyCode
         input = @input_buffer.dup
         @input_buffer.clear
         @cursor_position = 0
+        @input_scroll_offset = 0
         input
       end
 
