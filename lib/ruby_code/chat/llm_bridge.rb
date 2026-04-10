@@ -50,6 +50,12 @@ module RubyCode
         reset_chat!(@state.model)
       end
 
+      def reset_agent_session!
+        @tool_call_count = 0
+        @write_tool_call_count = 0
+        reset_chat!(@state.model)
+      end
+
       def toggle_plan_mode!(enabled)
         @plan_mode = enabled
         if enabled && @agentic_mode
@@ -171,21 +177,20 @@ module RubyCode
       end
 
       def check_tool_limits!
-        if @write_tool_call_count > MAX_WRITE_TOOL_ROUNDS
-          raise Tools::AgentIterationLimitError,
-                "Reached maximum of #{MAX_WRITE_TOOL_ROUNDS} write tool calls. " \
-                "Use /agent on to start a new session."
+        if @write_tool_call_count >= MAX_WRITE_TOOL_ROUNDS
+          @write_tool_call_count = 0
+          @state.add_message(:system,
+                             "Write tool call budget (#{MAX_WRITE_TOOL_ROUNDS}) reached — auto-resetting counter.")
         end
 
         return unless @tool_call_count > MAX_TOTAL_TOOL_ROUNDS
 
         raise Tools::AgentIterationLimitError,
               "Reached maximum of #{MAX_TOTAL_TOOL_ROUNDS} total tool calls. " \
-              "Use /agent on to start a new session."
+              "Send a new message to continue, or use /agent on to reset counters."
       end
 
       def warn_approaching_limit
-        warn_limit(@write_tool_call_count, MAX_WRITE_TOOL_ROUNDS, "write")
         warn_limit(@tool_call_count, MAX_TOTAL_TOOL_ROUNDS, "total")
       end
 

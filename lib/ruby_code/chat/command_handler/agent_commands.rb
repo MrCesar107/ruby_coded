@@ -24,7 +24,9 @@ module RubyCode
 
         def enable_agent_mode
           if @llm_bridge.agentic_mode
-            @state.add_message(:system, "Agent mode is already enabled.")
+            @llm_bridge.reset_agent_session!
+            @state.add_message(:system,
+                               "Agent session reset. Tool call counters cleared — ready for a new task.")
             return
           end
 

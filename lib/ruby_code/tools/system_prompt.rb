@@ -17,10 +17,10 @@ module RubyCode
         - Be concise in your explanations but thorough in your actions.
 
         Efficiency:
-        - You have a maximum of %<max_write_rounds>d write/edit/delete tool calls and %<max_total_rounds>d total tool calls per request.
-        - Read operations (read_file, list_directory) do not count toward the write limit.
+        - You have a budget of %<max_write_rounds>d write/edit/delete tool calls that auto-resets when reached, and a hard limit of %<max_total_rounds>d total tool calls per request.
+        - Read operations (read_file, list_directory) do not count toward the write budget.
         - Use edit_file for targeted changes — avoid rewriting entire files unnecessarily.
-        - If you receive a warning about approaching the limit, wrap up the most critical changes first.
+        - If you receive a warning about approaching the total limit, wrap up the most critical changes first.
       PROMPT
 
       def self.build(project_root:, max_write_rounds: 50, max_total_rounds: 200)
