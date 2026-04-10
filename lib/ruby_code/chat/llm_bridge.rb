@@ -19,6 +19,22 @@ module RubyCode
       TOOL_ROUNDS_WARNING_THRESHOLD = 0.8
       MAX_TOOL_RESULT_CHARS = 10_000
 
+      IMPLEMENTATION_PATTERNS = [
+        /\bimplement/i,
+        /\bgo ahead/i,
+        /\bproceed/i,
+        /\bexecut/i,
+        /\bejecutar?/i,
+        /\bcomenz/i,
+        /\bcomienz/i,
+        /\bhazlo/i,
+        /\bconstru[iy]/i,
+        /\badelante/i,
+        /\bdale\b/i,
+        /\bdo it/i,
+        /\bbuild it/i
+      ].freeze
+
       attr_reader :agentic_mode, :plan_mode, :project_root
 
       def initialize(state, project_root: Dir.pwd)
@@ -65,6 +81,7 @@ module RubyCode
       end
 
       def send_async(input)
+        auto_switch_to_agent! if should_auto_switch_to_agent?(input)
         @tool_call_count = 0
         @write_tool_call_count = 0
         chat = prepare_streaming
@@ -96,6 +113,20 @@ module RubyCode
       end
 
       private
+
+      def should_auto_switch_to_agent?(input)
+        @plan_mode && @state.current_plan && implementation_request?(input)
+      end
+
+      def implementation_request?(input)
+        IMPLEMENTATION_PATTERNS.any? { |pattern| input.match?(pattern) }
+      end
+
+      def auto_switch_to_agent!
+        toggle_agentic_mode!(true)
+        @state.add_message(:system,
+                           "Plan mode disabled — switching to agent mode to implement the plan.")
+      end
 
       def reconfigure_chat!
         @chat_mutex.synchronize do

@@ -155,6 +155,75 @@ class TestLLMBridge < Minitest::Test
     assert_empty new_chat.messages
   end
 
+  def test_auto_switches_to_agent_when_plan_exists_and_user_says_implement
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+    bridge.toggle_plan_mode!(true)
+    @state.update_current_plan!("# My Plan\n- Step 1\n- Step 2")
+
+    assert bridge.plan_mode
+    refute bridge.agentic_mode
+
+    result = bridge.send(:should_auto_switch_to_agent?, "implement the plan")
+
+    assert result
+  end
+
+  def test_no_auto_switch_without_existing_plan
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+    bridge.toggle_plan_mode!(true)
+
+    result = bridge.send(:should_auto_switch_to_agent?, "implement the plan")
+
+    refute result
+  end
+
+  def test_no_auto_switch_outside_plan_mode
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    result = bridge.send(:should_auto_switch_to_agent?, "implement the plan")
+
+    refute result
+  end
+
+  def test_implementation_patterns_match_english
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    %w[implement execute proceed].each do |word|
+      assert bridge.send(:implementation_request?, "please #{word} the plan"),
+             "Expected '#{word}' to match"
+    end
+
+    ["go ahead", "do it", "build it"].each do |phrase|
+      assert bridge.send(:implementation_request?, phrase),
+             "Expected '#{phrase}' to match"
+    end
+  end
+
+  def test_implementation_patterns_match_spanish
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    %w[implementa implementar ejecuta hazlo construye comienza adelante].each do |word|
+      assert bridge.send(:implementation_request?, word),
+             "Expected '#{word}' to match"
+    end
+  end
+
+  def test_implementation_patterns_reject_unrelated_messages
+    chat = build_configurable_chat
+    bridge = build_bridge_with_configurable_chat(chat)
+
+    ["add a login page", "what do you think?", "change the database schema",
+     "explain step 3", "can you refine the plan?"].each do |msg|
+      refute bridge.send(:implementation_request?, msg),
+             "Expected '#{msg}' NOT to match"
+    end
+  end
+
   private
 
   def rate_limit_error
