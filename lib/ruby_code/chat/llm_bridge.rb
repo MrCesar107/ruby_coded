@@ -74,6 +74,7 @@ module RubyCode
 
       def cancel!
         @cancel_requested = true
+        @state.mutex.synchronize { @state.tool_cv.signal }
       end
 
       def approve_tool!
@@ -133,22 +134,30 @@ module RubyCode
 
       def wait_for_confirmation(tool_call)
         display_name = short_tool_name(tool_call.name)
-        loop do
-          if @cancel_requested
-            @state.clear_tool_confirmation!
-            raise Tools::AgentCancelledError, "Operation cancelled by user"
-          end
+        decision = poll_tool_decision
+        case decision
+        when :cancelled
+          @state.clear_tool_confirmation!
+          raise Tools::AgentCancelledError, "Operation cancelled by user"
+        when :approved
+          @state.resolve_tool_confirmation!(:approved)
+        when :rejected
+          @state.resolve_tool_confirmation!(:rejected)
+          raise RubyCode::Tools::ToolRejectedError, "User rejected #{display_name}"
+        end
+      end
 
-          response = @state.tool_confirmation_response
-          case response
-          when :approved
-            @state.resolve_tool_confirmation!(:approved)
-            break
-          when :rejected
-            @state.resolve_tool_confirmation!(:rejected)
-            raise RubyCode::Tools::ToolRejectedError, "User rejected #{display_name}"
-          else
-            sleep(0.1)
+      def poll_tool_decision
+        @state.mutex.synchronize do
+          loop do
+            return :cancelled if @cancel_requested
+
+            case @state.instance_variable_get(:@tool_confirmation_response)
+            when :approved then return :approved
+            when :rejected then return :rejected
+            end
+
+            @state.tool_cv.wait(@state.mutex, 0.1)
           end
         end
       end
@@ -241,10 +250,7 @@ module RubyCode
         proc do |chunk|
           break if @cancel_requested
 
-          if chunk.content
-            @state.ensure_last_is_assistant!
-            @state.append_to_last_message(chunk.content)
-          end
+          @state.streaming_append(chunk.content) if chunk.content
         end
       end
 

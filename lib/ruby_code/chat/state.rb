@@ -18,7 +18,7 @@ module RubyCode
 
       attr_reader :input_buffer, :cursor_position, :messages, :scroll_offset,
                   :mode, :model_list, :model_select_index, :model_select_filter,
-                  :streaming
+                  :streaming, :mutex
       attr_accessor :model, :should_quit
 
       MIN_RENDER_INTERVAL = 0.05
@@ -42,6 +42,7 @@ module RubyCode
         @model_select_index = 0
         @model_select_filter = String.new
         @model_select_show_all = false
+        init_messages
         init_tool_confirmation
         init_plan_tracking
         init_plugin_state
@@ -78,7 +79,7 @@ module RubyCode
       end
 
       def mark_dirty!
-        @dirty = true
+        @mutex.synchronize { @dirty = true }
       end
 
       def append_to_input(text)

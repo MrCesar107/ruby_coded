@@ -24,6 +24,9 @@ module RubyCode
         @command_handler = build_command_handler
       end
 
+      IDLE_POLL_TIMEOUT = 0.016
+      STREAMING_POLL_TIMEOUT = 0.05
+
       def run
         RatatuiRuby.run do |tui|
           @tui = tui
@@ -34,7 +37,12 @@ module RubyCode
               @renderer.draw
               @state.mark_clean!
             end
-            break if handle_event == :quit
+
+            timeout = @state.streaming? ? STREAMING_POLL_TIMEOUT : IDLE_POLL_TIMEOUT
+            event = @tui.poll_event(timeout: timeout)
+            next if event.none?
+
+            break if dispatch_event(event) == :quit
           end
         end
       end
@@ -75,8 +83,7 @@ module RubyCode
         @state.add_message(:system, "Model switched to #{model_name}.")
       end
 
-      def handle_event
-        event = @tui.poll_event
+      def dispatch_event(event)
         action = @input_handler.process(event)
         case action
         when :quit then :quit

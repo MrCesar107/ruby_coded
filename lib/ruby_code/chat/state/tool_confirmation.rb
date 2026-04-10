@@ -11,11 +11,14 @@ module RubyCode
       # The user can press [a] to approve all future tool calls for
       # the current session, bypassing individual confirmations.
       module ToolConfirmation
+        attr_reader :tool_cv
+
         def init_tool_confirmation
           @pending_tool_name = nil
           @pending_tool_args = nil
           @tool_confirmation_response = nil
           @auto_approve_tools = false
+          @tool_cv = ConditionVariable.new
         end
 
         def awaiting_tool_confirmation?
@@ -47,7 +50,10 @@ module RubyCode
         end
 
         def tool_confirmation_response=(value)
-          @mutex.synchronize { @tool_confirmation_response = value }
+          @mutex.synchronize do
+            @tool_confirmation_response = value
+            @tool_cv.signal
+          end
         end
 
         def request_tool_confirmation!(tool_name, tool_args, risk_label: "WRITE")
@@ -66,6 +72,7 @@ module RubyCode
               input_tokens: 0,
               output_tokens: 0
             }
+            @message_generation += 1
             @dirty = true
           end
 
@@ -85,6 +92,7 @@ module RubyCode
             @pending_tool_args = nil
             @tool_confirmation_response = nil
             @mode = :chat
+            @message_generation += 1
             @dirty = true
           end
         end

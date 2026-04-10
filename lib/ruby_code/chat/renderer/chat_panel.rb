@@ -14,7 +14,22 @@ module RubyCode
 
         private
 
+        def init_render_cache
+          @cached_formatted_text = nil
+          @cached_format_gen = -1
+        end
+
+        def cached_formatted_text(messages)
+          gen = @state.message_generation
+          if gen != @cached_format_gen
+            @cached_formatted_text = format_messages_text(messages)
+            @cached_format_gen = gen
+          end
+          @cached_formatted_text
+        end
+
         def render_chat_panel(frame, area)
+          init_render_cache if @cached_format_gen.nil?
           messages = @state.messages_snapshot
 
           if @state.streaming? && thinking_in_progress?(messages)
@@ -26,7 +41,7 @@ module RubyCode
 
         def render_chat_standard(frame, area, messages)
           has_messages = !messages.empty?
-          text = has_messages ? format_messages_text(messages) : cover_banner
+          text = has_messages ? cached_formatted_text(messages) : cover_banner
           inner_height = [area.height - 2, 0].max
           inner_width = [area.width - 2, 0].max
 
@@ -204,7 +219,7 @@ module RubyCode
 
         def chat_panel_text
           messages = @state.messages_snapshot
-          messages.empty? ? cover_banner : format_messages_text(messages)
+          messages.empty? ? cover_banner : cached_formatted_text(messages)
         end
 
         def format_messages_text(messages)
@@ -212,7 +227,7 @@ module RubyCode
         end
 
         def chat_messages_text
-          format_messages_text(@state.messages_snapshot)
+          cached_formatted_text(@state.messages_snapshot)
         end
 
         # Tool messages are only visible inside the thinking panel;
