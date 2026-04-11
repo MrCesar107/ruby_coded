@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["Cesar Rodriguez"]
   spec.email = ["cesar.rodriguez.lara54@gmail.com"]
 
-  spec.summary = "RubyCode is an AI-powered terminal assistant for coding projects. (Similar to Claude Code or anothers)"
+  spec.summary = "AI-powered terminal coding assistant with agent mode, plan mode, and multi-provider LLM support."
   spec.description = "RubyCode is a terminal-based AI coding assistant built in Ruby. " \
                      "It provides a full TUI chat interface with support for multiple LLM providers " \
                      "(OpenAI, Anthropic, etc.), an agent mode with filesystem tools for reading, writing, " \

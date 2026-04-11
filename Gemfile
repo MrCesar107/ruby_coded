@@ -12,7 +12,7 @@ gem "ruby_llm"
 gem "tty-prompt"
 gem "webrick"
 
-group :developmet, :test do
+group :development, :test do
   gem "minitest", "~> 5.16"
 
   gem "rubocop", "~> 1.21"
