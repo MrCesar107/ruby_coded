@@ -1,43 +1,126 @@
 # RubyCode
 
-TODO: Delete this and the text below, and describe your gem
+```
+         /\
+        /  \
+       /    \         ____        _              ____          _
+      /------\       |  _ \ _   _| |__  _   _   / ___|___   __| | ___
+     /  \  /  \      | |_) | | | | '_ \| | | | | |   / _ \ / _` |/ _ \
+    /    \/    \     |  _ <| |_| | |_) | |_| | | |__| (_) | (_| |  __/
+    \    /\    /     |_| \_\\__,_|_.__/ \__, |  \____\___/ \__,_|\___|
+     \  /  \  /                         |___/
+      \/    \/
+       \    /
+        \  /
+         \/
+```
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/ruby_code`. To experiment with that code, run `bin/console` for an interactive prompt.
+An AI-powered terminal coding assistant built in Ruby. Chat with LLMs, let an agent edit your project files, or plan tasks — all from your terminal.
+
+## Features
+
+- **Chat mode** — Talk to an LLM directly in a full terminal UI (TUI) built with [ratatui](https://github.com/nicholasgasior/ratatui-ruby)
+- **Agent mode** — The model can read, write, edit, and delete files in your project, create directories, and run shell commands with user confirmation
+- **Plan mode** — Generate structured plans before implementing, with interactive clarification questions and auto-switch to agent mode when ready
+- **Multi-provider support** — Works with OpenAI and Anthropic out of the box (OAuth and API key authentication)
+- **Tool confirmation** — Write and dangerous operations require explicit approval; safe operations (read, list) run automatically
+- **Token & cost tracking** — Live status bar showing token usage and estimated session cost
+- **Plugin system** — Extend the chat with custom state, input handlers, renderer overlays, and commands
+- **Slash commands** — `/agent`, `/plan`, `/model`, `/history`, `/tokens`, `/help`, and more
+
+## Requirements
+
+- Ruby >= 3.3.0
+- An OpenAI or Anthropic account (API key or OAuth)
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
 ```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+gem install ruby_code
 ```
 
 ## Usage
 
-TODO: Write usage instructions here
+Navigate to any project directory and run:
+
+```bash
+ruby_code
+```
+
+On first launch you'll be asked to authenticate with a provider. After that, you're dropped into chat mode.
+
+### Modes
+
+| Command | Description |
+|---|---|
+| `/agent on` | Enable agent mode (file tools + shell access) |
+| `/agent off` | Disable agent mode |
+| `/plan on` | Enable plan mode (read-only tools, structured planning) |
+| `/plan off` | Disable plan mode |
+| `/plan save` | Save the current plan to a file |
+| `/model` | Switch to a different model |
+| `/tokens` | Show detailed token usage breakdown |
+| `/history` | Show conversation history |
+| `/clear` | Clear the conversation |
+| `/help` | Show all available commands |
+
+### Agent mode
+
+When agent mode is active, the model has access to these tools:
+
+| Tool | Risk level | Description |
+|---|---|---|
+| `read_file` | Safe | Read file contents |
+| `list_directory` | Safe | List directory contents |
+| `write_file` | Confirm | Write a new file |
+| `edit_file` | Confirm | Search and replace in a file |
+| `create_directory` | Confirm | Create a new directory |
+| `delete_path` | Dangerous | Delete a file or directory |
+| `run_command` | Dangerous | Execute a shell command |
+
+Safe tools run without asking. Confirm and dangerous tools show the operation details and wait for your approval (`y` to approve, `n` to reject, `a` to approve all remaining).
+
+### Plan mode
+
+Plan mode restricts the model to read-only tools and a planning-oriented system prompt. The model will analyze your project and propose a structured plan. If the model needs clarification, it presents interactive options you can select or answer with custom text.
+
+## Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `Enter` | Send message |
+| `Esc` | Cancel streaming / clear input |
+| `Ctrl+C` | Quit |
+| `Up/Down` | Scroll chat history |
+| `Left/Right` | Move cursor in input |
+| `Home/End` | Jump to start/end of input |
+| `Tab` | Autocomplete commands |
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```bash
+git clone https://github.com/MrCesar107/ruby_code.git
+cd ruby_code
+bundle install
+bundle exec rake test
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To run the application locally:
 
-## Contributing
+```bash
+bundle exec exe/ruby_code
+```
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/ruby_code. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/ruby_code/blob/main/CODE_OF_CONDUCT.md).
+## What's next
+
+- Find a way to update the autocomplete plugin when a new command is added []
+- Display context window size (depending on the model) []
+- UI element to indicate the AI is performing a task []
+- Add the possibility to create custom commands []
+- Skills implementation []
+- Implement Google Auth for Gemini []
+- Session recovery system by ID []
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the RubyCode project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/ruby_code/blob/main/CODE_OF_CONDUCT.md).
