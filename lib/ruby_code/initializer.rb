@@ -11,6 +11,11 @@ require_relative "chat/app"
 module RubyCode
   # Initializer class for the RubyCode gem (think of it as a main class)
   class Initializer
+    PROVIDER_DEFAULT_MODELS = {
+      openai: "gpt-5-codex",
+      anthropic: "claude-sonnet-4-6"
+    }.freeze
+
     def initialize
       @user_cfg = UserConfig.new
       @prompt = TTY::Prompt.new
@@ -40,7 +45,8 @@ module RubyCode
       stored = @user_cfg.get_config("model")
       return stored.to_s if stored && !stored.to_s.strip.empty?
 
-      RubyLLM.config.default_model
+      provider = @auth_manager.authenticated_provider_names.first
+      PROVIDER_DEFAULT_MODELS.fetch(provider, RubyLLM.config.default_model).to_s
     end
   end
 end

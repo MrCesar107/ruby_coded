@@ -44,6 +44,10 @@ module RubyCode
         PROVIDERS.keys
       end
 
+      def authenticated_provider_names
+        PROVIDERS.keys.select { |name| credential_store.retrieve(name) }
+      end
+
       def check_authentication
         return if configured_providers.any? { |name| credential_store.retrieve(name) }
 
