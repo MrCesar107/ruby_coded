@@ -5,14 +5,12 @@ require "ruby_code/auth/auth_manager"
 
 class TestAuthManager < Minitest::Test
   def setup
-    @original_dir = Dir.pwd
     @tmpdir = Dir.mktmpdir
-    Dir.chdir(@tmpdir)
-    @manager = RubyCode::Auth::AuthManager.new
+    @config_path = File.join(@tmpdir, "config.yaml")
+    @manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
   end
 
   def teardown
-    Dir.chdir(@original_dir)
     FileUtils.remove_entry(@tmpdir)
   end
 
@@ -32,7 +30,7 @@ class TestAuthManager < Minitest::Test
 
   def test_check_authentication_skips_when_credentials_exist
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     result = manager.check_authentication
     assert_nil result
@@ -57,7 +55,7 @@ class TestAuthManager < Minitest::Test
 
   def test_login_prompt_always_asks_even_with_existing_credentials
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-old" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     strategy_mock = Minitest::Mock.new
     strategy_mock.expect(:authenticate, { "auth_method" => "api_key", "key" => "sk-new" })
@@ -99,7 +97,7 @@ class TestAuthManager < Minitest::Test
 
   def test_logout_removes_credentials
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     stub_ruby_llm_configure do
       manager.logout(:openai)
@@ -110,7 +108,7 @@ class TestAuthManager < Minitest::Test
 
   def test_configure_ruby_llm_sets_api_key_from_api_key_credentials
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-from-config" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     configured_key = nil
     RubyLLM.stub(:configure, lambda { |&block|
@@ -134,7 +132,7 @@ class TestAuthManager < Minitest::Test
                         "refresh_token" => "rt-test",
                         "expires_at" => "2026-12-31T00:00:00Z"
                       })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     configured_key = nil
     RubyLLM.stub(:configure, lambda { |&block|
@@ -153,7 +151,7 @@ class TestAuthManager < Minitest::Test
 
   def test_configure_ruby_llm_sets_anthropic_api_key
     store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     configured_key = nil
     RubyLLM.stub(:configure, lambda { |&block|
@@ -173,7 +171,7 @@ class TestAuthManager < Minitest::Test
   def test_configure_ruby_llm_sets_both_providers_when_both_configured
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-openai-test" })
     store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     keys_set = {}
     RubyLLM.stub(:configure, lambda { |&block|
@@ -191,7 +189,7 @@ class TestAuthManager < Minitest::Test
   end
 
   def test_configure_ruby_llm_skips_unconfigured_providers
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     RubyLLM.stub(:configure, lambda { |&block|
       config = Object.new
@@ -220,7 +218,7 @@ class TestAuthManager < Minitest::Test
 
   def test_logout_anthropic_removes_credentials
     store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     stub_ruby_llm_configure do
       manager.logout(:anthropic)
@@ -231,7 +229,7 @@ class TestAuthManager < Minitest::Test
 
   def test_check_authentication_skips_when_anthropic_credentials_exist
     store_credentials(:anthropic, { "auth_method" => "api_key", "key" => "sk-ant-api03-test" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     result = manager.check_authentication
     assert_nil result
@@ -245,7 +243,7 @@ class TestAuthManager < Minitest::Test
       "expires_at" => (Time.now - 3600).iso8601
     }
     store_credentials(:openai, expired_credentials)
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     refreshed_tokens = {
       "auth_method" => "oauth",
@@ -282,7 +280,7 @@ class TestAuthManager < Minitest::Test
       "expires_at" => (Time.now + 3600).iso8601
     }
     store_credentials(:openai, valid_credentials)
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     configured_key = nil
     RubyLLM.stub(:configure, lambda { |&block|
@@ -305,7 +303,7 @@ class TestAuthManager < Minitest::Test
       "expires_at" => (Time.now - 3600).iso8601
     }
     store_credentials(:openai, expired_credentials)
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     failing_strategy = Object.new
     failing_strategy.define_singleton_method(:refresh) { |_creds| raise "refresh failed" }
@@ -327,7 +325,7 @@ class TestAuthManager < Minitest::Test
 
   def test_configure_ruby_llm_does_not_refresh_api_key_credentials
     store_credentials(:openai, { "auth_method" => "api_key", "key" => "sk-stable" })
-    manager = RubyCode::Auth::AuthManager.new
+    manager = RubyCode::Auth::AuthManager.new(config_path: @config_path)
 
     configured_key = nil
     RubyLLM.stub(:configure, lambda { |&block|
@@ -390,7 +388,7 @@ class TestAuthManager < Minitest::Test
   end
 
   def store_credentials(provider_name, credentials)
-    config = RubyCode::UserConfig.new
+    config = RubyCode::UserConfig.new(config_path: @config_path)
     cfg = config.full_config
     cfg["providers"] ||= {}
     cfg["providers"][provider_name.to_s] = credentials
@@ -398,6 +396,6 @@ class TestAuthManager < Minitest::Test
   end
 
   def credential_store
-    RubyCode::Auth::CredentialsStore.new
+    RubyCode::Auth::CredentialsStore.new(config_path: @config_path)
   end
 end

@@ -8,14 +8,13 @@ require "ruby_code/auth/auth_manager"
 
 class TestCommandHandler < Minitest::Test
   def setup
-    @original_dir = Dir.pwd
     @tmpdir = Dir.mktmpdir
-    Dir.chdir(@tmpdir)
+    @config_path = File.join(@tmpdir, "config.yaml")
 
     @state = RubyCode::Chat::State.new(model: "gpt-4o")
     @llm_bridge = MockLLMBridge.new
-    @credentials_store = RubyCode::Auth::CredentialsStore.new
-    @user_config = RubyCode::UserConfig.new
+    @credentials_store = RubyCode::Auth::CredentialsStore.new(config_path: @config_path)
+    @user_config = RubyCode::UserConfig.new(config_path: @config_path)
     @handler = RubyCode::Chat::CommandHandler.new(
       @state,
       llm_bridge: @llm_bridge,
@@ -25,7 +24,6 @@ class TestCommandHandler < Minitest::Test
   end
 
   def teardown
-    Dir.chdir(@original_dir)
     FileUtils.remove_entry(@tmpdir)
   end
 
@@ -303,12 +301,12 @@ class TestCommandHandler < Minitest::Test
       @state,
       llm_bridge: @llm_bridge,
       user_config: @user_config,
-      credentials_store: RubyCode::Auth::CredentialsStore.new
+      credentials_store: RubyCode::Auth::CredentialsStore.new(config_path: @config_path)
     )
   end
 
   def store_credentials(provider_name, credentials)
-    config = RubyCode::UserConfig.new
+    config = RubyCode::UserConfig.new(config_path: @config_path)
     cfg = config.full_config
     cfg["providers"] ||= {}
     cfg["providers"][provider_name.to_s] = credentials

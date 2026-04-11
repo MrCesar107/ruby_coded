@@ -21,6 +21,10 @@ module RubyCode
         anthropic: Providers::Anthropic
       }.freeze
 
+      def initialize(config_path: UserConfig::CONFIG_PATH)
+        @config_path = config_path
+      end
+
       def login(provider_name)
         provider = PROVIDERS.fetch(provider_name)
         strategy = strategy_for(provider)
@@ -90,7 +94,7 @@ module RubyCode
       end
 
       def credential_store
-        @credential_store ||= CredentialsStore.new
+        @credential_store ||= CredentialsStore.new(config_path: @config_path)
       end
 
       def extract_api_key(credentials)

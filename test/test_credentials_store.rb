@@ -5,14 +5,12 @@ require "ruby_code/auth/credentials_store"
 
 class TestCredentialsStore < Minitest::Test
   def setup
-    @original_dir = Dir.pwd
     @tmpdir = Dir.mktmpdir
-    Dir.chdir(@tmpdir)
-    @store = RubyCode::Auth::CredentialsStore.new
+    @config_path = File.join(@tmpdir, "config.yaml")
+    @store = RubyCode::Auth::CredentialsStore.new(config_path: @config_path)
   end
 
   def teardown
-    Dir.chdir(@original_dir)
     FileUtils.remove_entry(@tmpdir)
   end
 
@@ -52,16 +50,16 @@ class TestCredentialsStore < Minitest::Test
   def test_store_persists_to_config_file
     @store.store(:openai, { "auth_method" => "api_key", "key" => "sk-persisted" })
 
-    raw = YAML.load_file(".config.yaml", permitted_classes: [Symbol])
+    raw = YAML.load_file(@config_path, permitted_classes: [Symbol])
     assert_equal "sk-persisted", raw.dig("providers", "openai", "key")
   end
 
   def test_store_preserves_existing_user_config
     @store.store(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
 
-    raw = YAML.load_file(".config.yaml", permitted_classes: [Symbol])
+    raw = YAML.load_file(@config_path, permitted_classes: [Symbol])
     assert raw.key?("user_config")
-    assert_equal false, raw["user_config"]["current_directory_permission"]
+    assert_equal [], raw["user_config"]["trusted_directories"]
   end
 
   def test_store_does_not_overwrite_other_providers
@@ -106,14 +104,14 @@ class TestCredentialsStore < Minitest::Test
     @store.store(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
     @store.remove(:openai)
 
-    raw = YAML.load_file(".config.yaml", permitted_classes: [Symbol])
+    raw = YAML.load_file(@config_path, permitted_classes: [Symbol])
     assert_nil raw.dig("providers", "openai")
   end
 
   def test_retrieve_works_with_symbol_and_stores_as_string
     @store.store(:openai, { "auth_method" => "api_key", "key" => "sk-test" })
 
-    raw = YAML.load_file(".config.yaml", permitted_classes: [Symbol])
+    raw = YAML.load_file(@config_path, permitted_classes: [Symbol])
     assert raw["providers"].key?("openai")
     assert_equal "sk-test", @store.retrieve(:openai)["key"]
   end

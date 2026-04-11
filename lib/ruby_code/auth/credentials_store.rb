@@ -8,8 +8,8 @@ module RubyCode
   module Auth
     # This class is used to manage the credentials in the config file
     class CredentialsStore
-      def initialize
-        @config = UserConfig.new
+      def initialize(config_path: UserConfig::CONFIG_PATH)
+        @config = UserConfig.new(config_path: config_path)
       end
 
       def store(provider_name, credentials)
