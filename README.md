@@ -121,6 +121,20 @@ bundle exec exe/ruby_code
 - Implement Google Auth for Gemini []
 - Session recovery system by ID []
 
+## Contributing
+
+Contributions are welcome! To get started:
+
+1. Fork the repository
+2. Create a new branch for your feature or fix (`git checkout -b my-feature`)
+3. Make your changes and add tests if applicable
+4. Make sure all tests pass (`bundle exec rake test`)
+5. Commit your changes (`git commit -m "Add my feature"`)
+6. Push to your fork (`git push origin my-feature`)
+7. Open a Pull Request against the `main` branch of this repository
+
+Your PR will be reviewed and merged if everything looks good. If you're unsure about a change, feel free to open an issue first to discuss it.
+
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
