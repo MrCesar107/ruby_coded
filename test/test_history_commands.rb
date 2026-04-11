@@ -107,6 +107,26 @@ class TestHistoryCommands < Minitest::Test
     assert_includes last_msg[:content], "Subtotal: 150 tokens"
   end
 
+  def test_cmd_tokens_shows_thinking_tokens_when_present
+    @state.add_message(:assistant, "Hi")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 500)
+
+    @host.cmd_tokens(nil)
+
+    last_msg = @state.messages_snapshot.last
+    assert_includes last_msg[:content], "Thinking: 500 tokens"
+  end
+
+  def test_cmd_tokens_hides_thinking_when_zero
+    @state.add_message(:assistant, "Hi")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50)
+
+    @host.cmd_tokens(nil)
+
+    last_msg = @state.messages_snapshot.last
+    refute_includes last_msg[:content], "Thinking:"
+  end
+
   def test_cmd_tokens_shows_totals_line
     @state.add_message(:assistant, "Hi")
     @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50)
@@ -114,8 +134,21 @@ class TestHistoryCommands < Minitest::Test
     @host.cmd_tokens(nil)
 
     last_msg = @state.messages_snapshot.last
-    assert_includes last_msg[:content], "Total: 150 tokens (↑100 ↓50)"
+    assert_includes last_msg[:content], "Total: 150 tokens"
+    assert_includes last_msg[:content], "↑100"
+    assert_includes last_msg[:content], "↓50"
     assert_includes last_msg[:content], "─" * 50
+  end
+
+  def test_cmd_tokens_totals_include_thinking
+    @state.add_message(:assistant, "Hi")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 500)
+
+    @host.cmd_tokens(nil)
+
+    last_msg = @state.messages_snapshot.last
+    assert_includes last_msg[:content], "Total: 650 tokens"
+    assert_includes last_msg[:content], "💭500"
   end
 
   def test_cmd_tokens_shows_pricing_unavailable_for_unknown_model
@@ -185,23 +218,19 @@ class TestHistoryCommands < Minitest::Test
   end
 
   def test_format_usd_tiny_amount
-    result = @host.format_usd(0.000025)
-    assert_equal "$0.000025", result
+    assert_equal "$0.00", @host.format_usd(0.000025)
   end
 
   def test_format_usd_small_amount
-    result = @host.format_usd(0.05)
-    assert_equal "$0.0500", result
+    assert_equal "$0.05", @host.format_usd(0.05)
   end
 
   def test_format_usd_large_amount
-    result = @host.format_usd(1.50)
-    assert_equal "$1.50", result
+    assert_equal "$1.50", @host.format_usd(1.50)
   end
 
   def test_format_usd_zero
-    result = @host.format_usd(0.0)
-    assert_equal "$0.000000", result
+    assert_equal "$0.00", @host.format_usd(0.0)
   end
 
   class HistoryCommandsHost

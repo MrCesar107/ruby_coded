@@ -48,9 +48,11 @@ class TestTokenCost < Minitest::Test
     entry = breakdown.first
     assert_nil entry[:input_cost]
     assert_nil entry[:output_cost]
+    assert_nil entry[:thinking_cost]
     assert_nil entry[:total_cost]
     assert_nil entry[:input_price_per_million]
     assert_nil entry[:output_price_per_million]
+    assert_nil entry[:thinking_price_per_million]
   end
 
   def test_total_session_cost_nil_when_no_pricing
@@ -73,8 +75,10 @@ class TestTokenCost < Minitest::Test
     @state.update_last_message_tokens(input_tokens: 200, output_tokens: 75)
 
     usage = @state.token_usage_by_model
-    assert_equal({ input_tokens: 100, output_tokens: 50 }, usage["test-model"])
-    assert_equal({ input_tokens: 200, output_tokens: 75 }, usage["model-b"])
+    assert_equal 100, usage["test-model"][:input_tokens]
+    assert_equal 50, usage["test-model"][:output_tokens]
+    assert_equal 200, usage["model-b"][:input_tokens]
+    assert_equal 75, usage["model-b"][:output_tokens]
   end
 
   def test_token_usage_by_model_returns_independent_copy
@@ -85,6 +89,33 @@ class TestTokenCost < Minitest::Test
     usage["test-model"][:input_tokens] = 999
 
     assert_equal 100, @state.token_usage_by_model["test-model"][:input_tokens]
+  end
+
+  def test_session_cost_breakdown_includes_thinking_tokens
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 500)
+
+    breakdown = @state.session_cost_breakdown
+    entry = breakdown.first
+    assert_equal 500, entry[:thinking_tokens]
+  end
+
+  def test_session_cost_breakdown_includes_cached_tokens
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, cached_tokens: 300)
+
+    breakdown = @state.session_cost_breakdown
+    entry = breakdown.first
+    assert_equal 300, entry[:cached_tokens]
+  end
+
+  def test_session_cost_breakdown_includes_cache_creation_tokens
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, cache_creation_tokens: 80)
+
+    breakdown = @state.session_cost_breakdown
+    entry = breakdown.first
+    assert_equal 80, entry[:cache_creation_tokens]
   end
 
   def test_clear_messages_resets_token_usage

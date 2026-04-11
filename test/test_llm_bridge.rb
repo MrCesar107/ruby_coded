@@ -287,11 +287,15 @@ class TestLLMBridge < Minitest::Test
     end
   end
 
-  def mock_response(content:, input_tokens:, output_tokens:)
+  def mock_response(content:, input_tokens:, output_tokens:, thinking_tokens: nil,
+                    cached_tokens: nil, cache_creation_tokens: nil)
     resp = Object.new
     resp.define_singleton_method(:content) { content }
     resp.define_singleton_method(:input_tokens) { input_tokens }
     resp.define_singleton_method(:output_tokens) { output_tokens }
+    resp.define_singleton_method(:thinking_tokens) { thinking_tokens }
+    resp.define_singleton_method(:cached_tokens) { cached_tokens }
+    resp.define_singleton_method(:cache_creation_tokens) { cache_creation_tokens }
     resp
   end
 end

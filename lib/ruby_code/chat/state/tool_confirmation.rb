@@ -69,8 +69,7 @@ module RubyCode
               role: :tool_pending,
               content: String.new(pending_text),
               timestamp: Time.now,
-              input_tokens: 0,
-              output_tokens: 0
+              **Messages::ZERO_TOKEN_USAGE
             }
             @message_generation += 1
             @dirty = true

@@ -267,7 +267,10 @@ module RubyCode
 
         @state.update_last_message_tokens(
           input_tokens: response.input_tokens,
-          output_tokens: response.output_tokens
+          output_tokens: response.output_tokens,
+          thinking_tokens: response.respond_to?(:thinking_tokens) ? response.thinking_tokens : nil,
+          cached_tokens: response.respond_to?(:cached_tokens) ? response.cached_tokens : nil,
+          cache_creation_tokens: response.respond_to?(:cache_creation_tokens) ? response.cache_creation_tokens : nil
         )
       end
 

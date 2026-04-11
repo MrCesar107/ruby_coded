@@ -11,11 +11,14 @@ module RubyCode
         def render_status_bar(frame, area)
           input_tok = @state.total_input_tokens
           output_tok = @state.total_output_tokens
-          total_tok = input_tok + output_tok
+          thinking_tok = @state.total_thinking_tokens
+          total_tok = input_tok + output_tok + thinking_tok
           cost = @state.total_session_cost
           model_name = @state.model.to_s
 
-          left = " ↑#{format_number(input_tok)} ↓#{format_number(output_tok)} (#{format_number(total_tok)} tokens)"
+          left = " ↑#{format_number(input_tok)} ↓#{format_number(output_tok)}"
+          left << " 💭#{format_number(thinking_tok)}" if thinking_tok > 0
+          left << " (#{format_number(total_tok)} tokens)"
           right = "#{model_name} | #{format_cost(cost)} "
           center_pad = [area.width - left.length - right.length, 1].max
           text = "#{left}#{" " * center_pad}#{right}"
@@ -31,13 +34,7 @@ module RubyCode
         def format_cost(cost)
           return "Cost: N/A" if cost.nil?
 
-          if cost < 0.01
-            "Cost: $#{format("%.6f", cost)}"
-          elsif cost < 1.0
-            "Cost: $#{format("%.4f", cost)}"
-          else
-            "Cost: $#{format("%.2f", cost)}"
-          end
+          "Cost: $#{format("%.2f", cost)}"
         end
       end
     end

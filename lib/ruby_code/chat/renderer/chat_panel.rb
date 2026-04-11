@@ -151,7 +151,7 @@ module RubyCode
           truncated = cycle.last(MAX_THINKING_MESSAGES)
           omitted = cycle.length - MAX_THINKING_MESSAGES
           header = { role: :system, content: "... #{omitted} earlier messages omitted ...", timestamp: Time.now,
-                     input_tokens: 0, output_tokens: 0 }
+                     **RubyCode::Chat::State::Messages::ZERO_TOKEN_USAGE }
           [header] + truncated
         end
 

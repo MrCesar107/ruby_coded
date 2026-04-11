@@ -22,6 +22,9 @@ class TestStateMessages < Minitest::Test
     msg = @state.messages.first
     assert_equal 0, msg[:input_tokens]
     assert_equal 0, msg[:output_tokens]
+    assert_equal 0, msg[:thinking_tokens]
+    assert_equal 0, msg[:cached_tokens]
+    assert_equal 0, msg[:cache_creation_tokens]
   end
 
   def test_add_message_includes_timestamp
@@ -131,6 +134,31 @@ class TestStateMessages < Minitest::Test
     assert_equal 20, msg[:output_tokens]
   end
 
+  def test_update_last_message_tokens_with_extended_fields
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(
+      input_tokens: 100, output_tokens: 50,
+      thinking_tokens: 500, cached_tokens: 200, cache_creation_tokens: 80
+    )
+
+    msg = @state.messages.last
+    assert_equal 100, msg[:input_tokens]
+    assert_equal 50, msg[:output_tokens]
+    assert_equal 500, msg[:thinking_tokens]
+    assert_equal 200, msg[:cached_tokens]
+    assert_equal 80, msg[:cache_creation_tokens]
+  end
+
+  def test_update_last_message_tokens_nil_extended_fields_default_to_zero
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50)
+
+    msg = @state.messages.last
+    assert_equal 0, msg[:thinking_tokens]
+    assert_equal 0, msg[:cached_tokens]
+    assert_equal 0, msg[:cache_creation_tokens]
+  end
+
   def test_update_last_message_tokens_noop_when_empty
     @state.update_last_message_tokens(input_tokens: 10, output_tokens: 20)
     assert_empty @state.messages
@@ -175,6 +203,16 @@ class TestStateMessages < Minitest::Test
   def test_total_tokens_zero_when_empty
     assert_equal 0, @state.total_input_tokens
     assert_equal 0, @state.total_output_tokens
+    assert_equal 0, @state.total_thinking_tokens
+  end
+
+  def test_total_thinking_tokens
+    @state.add_message(:assistant, "a")
+    @state.update_last_message_tokens(input_tokens: 10, output_tokens: 5, thinking_tokens: 100)
+    @state.add_message(:assistant, "b")
+    @state.update_last_message_tokens(input_tokens: 10, output_tokens: 5, thinking_tokens: 200)
+
+    assert_equal 300, @state.total_thinking_tokens
   end
 
   # --- update_last_message_tokens with model: parameter ---
@@ -184,7 +222,8 @@ class TestStateMessages < Minitest::Test
     @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50)
 
     usage = @state.token_usage_by_model
-    assert_equal({ input_tokens: 100, output_tokens: 50 }, usage["gpt-4o"])
+    assert_equal 100, usage["gpt-4o"][:input_tokens]
+    assert_equal 50, usage["gpt-4o"][:output_tokens]
   end
 
   def test_update_last_message_tokens_tracks_by_explicit_model
@@ -192,7 +231,7 @@ class TestStateMessages < Minitest::Test
     @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, model: "claude-sonnet")
 
     usage = @state.token_usage_by_model
-    assert_equal({ input_tokens: 100, output_tokens: 50 }, usage["claude-sonnet"])
+    assert_equal 100, usage["claude-sonnet"][:input_tokens]
     assert_nil usage["gpt-4o"]
   end
 
@@ -203,7 +242,8 @@ class TestStateMessages < Minitest::Test
     @state.update_last_message_tokens(input_tokens: 200, output_tokens: 75)
 
     usage = @state.token_usage_by_model
-    assert_equal({ input_tokens: 300, output_tokens: 125 }, usage["gpt-4o"])
+    assert_equal 300, usage["gpt-4o"][:input_tokens]
+    assert_equal 125, usage["gpt-4o"][:output_tokens]
   end
 
   def test_update_last_message_tokens_tracks_multiple_models
@@ -213,8 +253,24 @@ class TestStateMessages < Minitest::Test
     @state.update_last_message_tokens(input_tokens: 200, output_tokens: 75, model: "model-b")
 
     usage = @state.token_usage_by_model
-    assert_equal({ input_tokens: 100, output_tokens: 50 }, usage["model-a"])
-    assert_equal({ input_tokens: 200, output_tokens: 75 }, usage["model-b"])
+    assert_equal 100, usage["model-a"][:input_tokens]
+    assert_equal 50, usage["model-a"][:output_tokens]
+    assert_equal 200, usage["model-b"][:input_tokens]
+    assert_equal 75, usage["model-b"][:output_tokens]
+  end
+
+  def test_update_last_message_tokens_accumulates_extended_fields_per_model
+    @state.add_message(:assistant, "A")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 500,
+                                      cached_tokens: 200, cache_creation_tokens: 80)
+    @state.add_message(:assistant, "B")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 300,
+                                      cached_tokens: 100, cache_creation_tokens: 20)
+
+    usage = @state.token_usage_by_model["gpt-4o"]
+    assert_equal 800, usage[:thinking_tokens]
+    assert_equal 300, usage[:cached_tokens]
+    assert_equal 100, usage[:cache_creation_tokens]
   end
 
   # --- clear_messages! resets token usage ---

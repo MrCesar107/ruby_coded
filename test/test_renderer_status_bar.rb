@@ -61,6 +61,33 @@ class TestRendererStatusBar < Minitest::Test
     assert_includes widget[:text], "(225 tokens)"
   end
 
+  def test_render_status_bar_shows_thinking_tokens_when_present
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50, thinking_tokens: 500)
+
+    frame = MockFrame.new
+    area = MockArea.new(width: 120, height: 1)
+
+    @host.render_status_bar(frame, area)
+
+    widget, = frame.rendered.first
+    assert_includes widget[:text], "💭500"
+    assert_includes widget[:text], "(650 tokens)"
+  end
+
+  def test_render_status_bar_hides_thinking_when_zero
+    @state.add_message(:assistant, "Hello")
+    @state.update_last_message_tokens(input_tokens: 100, output_tokens: 50)
+
+    frame = MockFrame.new
+    area = MockArea.new(width: 80, height: 1)
+
+    @host.render_status_bar(frame, area)
+
+    widget, = frame.rendered.first
+    refute_includes widget[:text], "💭"
+  end
+
   def test_render_status_bar_formats_large_token_counts
     @state.add_message(:assistant, "Hello")
     @state.update_last_message_tokens(input_tokens: 1_234_567, output_tokens: 890_123)
@@ -115,11 +142,11 @@ class TestRendererStatusBar < Minitest::Test
   end
 
   def test_format_cost_tiny
-    assert_equal "Cost: $0.000025", @host.format_cost(0.000025)
+    assert_equal "Cost: $0.00", @host.format_cost(0.000025)
   end
 
   def test_format_cost_small
-    assert_equal "Cost: $0.0500", @host.format_cost(0.05)
+    assert_equal "Cost: $0.05", @host.format_cost(0.05)
   end
 
   def test_format_cost_large
@@ -127,15 +154,15 @@ class TestRendererStatusBar < Minitest::Test
   end
 
   def test_format_cost_zero
-    assert_equal "Cost: $0.000000", @host.format_cost(0.0)
+    assert_equal "Cost: $0.00", @host.format_cost(0.0)
   end
 
   def test_format_cost_boundary_below_one_cent
-    assert_equal "Cost: $0.009900", @host.format_cost(0.0099)
+    assert_equal "Cost: $0.01", @host.format_cost(0.0099)
   end
 
   def test_format_cost_boundary_one_cent
-    assert_equal "Cost: $0.0100", @host.format_cost(0.01)
+    assert_equal "Cost: $0.01", @host.format_cost(0.01)
   end
 
   def test_format_cost_boundary_one_dollar

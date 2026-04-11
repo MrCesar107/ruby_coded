@@ -7,11 +7,16 @@ module RubyCode
       module Messages
         attr_reader :message_generation
 
+        ZERO_TOKEN_USAGE = {
+          input_tokens: 0, output_tokens: 0,
+          thinking_tokens: 0, cached_tokens: 0, cache_creation_tokens: 0
+        }.freeze
+
         def init_messages
           @message_generation = 0
           @snapshot_cache = nil
           @snapshot_cache_gen = -1
-          @token_usage_by_model = Hash.new { |h, k| h[k] = { input_tokens: 0, output_tokens: 0 } }
+          @token_usage_by_model = Hash.new { |h, k| h[k] = ZERO_TOKEN_USAGE.dup }
         end
 
         def add_message(role, content)
@@ -20,8 +25,7 @@ module RubyCode
               role: role,
               content: String.new(content.to_s),
               timestamp: Time.now,
-              input_tokens: 0,
-              output_tokens: 0
+              **ZERO_TOKEN_USAGE
             }
             @message_generation += 1
             @dirty = true
@@ -50,8 +54,7 @@ module RubyCode
               role: :assistant,
               content: String.new,
               timestamp: Time.now,
-              input_tokens: 0,
-              output_tokens: 0
+              **ZERO_TOKEN_USAGE
             }
             @message_generation += 1
             @dirty = true
@@ -66,8 +69,7 @@ module RubyCode
                 role: :assistant,
                 content: String.new,
                 timestamp: Time.now,
-                input_tokens: 0,
-                output_tokens: 0
+                **ZERO_TOKEN_USAGE
               }
             end
             @messages.last[:content] << text.to_s
@@ -119,16 +121,25 @@ module RubyCode
           end
         end
 
-        def update_last_message_tokens(input_tokens:, output_tokens:, model: nil)
+        def update_last_message_tokens(input_tokens:, output_tokens:, model: nil,
+                                       thinking_tokens: nil, cached_tokens: nil,
+                                       cache_creation_tokens: nil)
           @mutex.synchronize do
             return if @messages.empty?
 
-            @messages.last[:input_tokens] = input_tokens
-            @messages.last[:output_tokens] = output_tokens
+            last = @messages.last
+            last[:input_tokens] = input_tokens
+            last[:output_tokens] = output_tokens
+            last[:thinking_tokens] = thinking_tokens.to_i
+            last[:cached_tokens] = cached_tokens.to_i
+            last[:cache_creation_tokens] = cache_creation_tokens.to_i
 
-            model_key = model || @model
-            @token_usage_by_model[model_key][:input_tokens] += input_tokens.to_i
-            @token_usage_by_model[model_key][:output_tokens] += output_tokens.to_i
+            usage = @token_usage_by_model[model || @model]
+            usage[:input_tokens] += input_tokens.to_i
+            usage[:output_tokens] += output_tokens.to_i
+            usage[:thinking_tokens] += thinking_tokens.to_i
+            usage[:cached_tokens] += cached_tokens.to_i
+            usage[:cache_creation_tokens] += cache_creation_tokens.to_i
           end
         end
 
@@ -151,6 +162,12 @@ module RubyCode
         def total_output_tokens
           @mutex.synchronize do
             @messages.sum { |message| message[:output_tokens] }
+          end
+        end
+
+        def total_thinking_tokens
+          @mutex.synchronize do
+            @messages.sum { |message| message[:thinking_tokens] }
           end
         end
 
