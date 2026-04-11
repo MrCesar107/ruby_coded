@@ -1,0 +1,16 @@
+TODO
+
+- Mover archivo de configuración a un path seguro []
+- Corregir el auto ajuste del texto en el área de escritura (input) [*]
+- Agregar la opción de detener las operaciones del agente [*]
+- Mejorar la velocidad del agente [*]
+- Agregar un cursor [*]
+- Agregar soporte para UTF-8 [*]
+- Buscar una forma de actualizar el plugin de autocompletado cuando se agregue un nuevo comando []
+- Visualización de tokens utilizados en la sesión [*]
+- Visualización de la ventana de contexto (dependiendo del modelo utilizado) []
+- Visualización del dinero utilizado en la sesión [*]
+- Elemento UI para comunicar que la IA está realizando alguna tarea []
+- Comandos persnalizados []
+- Implementación de skills []
+- PENDIENTE: Tener un sistema de recuperación de sesiones por ID []
