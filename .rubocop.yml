@@ -1,3 +1,9 @@
+inherit_from: .rubocop_todo.yml
+
+inherit_mode:
+  merge:
+    - Exclude
+
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
@@ -9,5 +15,37 @@ Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
 
 Style/OneClassPerFile:
+  Exclude:
+    - "test/**/*"
+
+Metrics/AbcSize:
+  Exclude:
+    - "test/**/*"
+
+Metrics/ClassLength:
+  Exclude:
+    - "test/**/*"
+
+Metrics/MethodLength:
+  Exclude:
+    - "test/**/*"
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - "test/**/*"
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - "test/**/*"
+
+Metrics/ParameterLists:
+  Exclude:
+    - "test/**/*"
+
+Layout/LineLength:
+  Exclude:
+    - "test/**/*"
+
+Naming/MethodParameterName:
   Exclude:
     - "test/**/*"
