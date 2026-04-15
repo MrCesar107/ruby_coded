@@ -41,7 +41,7 @@ Gem::Specification.new do |spec|
   # spec.add_dependency "example-gem", "~> 1.0"
 
   spec.add_dependency "ratatui_ruby", "~> 1.4"
-  spec.add_dependency "ruby_llm", "~> 1.13.2"
+  spec.add_dependency "ruby_llm", "~> 1.13"
   spec.add_dependency "tty-prompt"
   spec.add_dependency "unicode-display_width"
   spec.add_dependency "webrick"
