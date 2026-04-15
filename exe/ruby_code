@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "ruby_code"
+require_relative "../lib/ruby_code"
 
 RubyCode.start
