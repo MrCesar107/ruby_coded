@@ -7,7 +7,7 @@ require "ruby_code/initializer"
 class TestInitializer < Minitest::Test
   def setup
     @original_dir = Dir.pwd
-    @tmpdir = Dir.mktmpdir
+    @tmpdir = File.realpath(Dir.mktmpdir)
     @config_path = File.join(@tmpdir, "config.yaml")
     Dir.chdir(@tmpdir)
   end
@@ -20,10 +20,13 @@ class TestInitializer < Minitest::Test
   def test_does_not_ask_permission_when_already_granted
     write_config(trusted_directories: [File.expand_path(@tmpdir)], with_provider: true)
 
+    mock_prompt = build_prompt_stub
     output = capture_io do
-      stub_user_config do
-        stub_auth_manager do
-          RubyCode::Initializer.new
+      TTY::Prompt.stub(:new, mock_prompt) do
+        stub_user_config do
+          stub_auth_manager do
+            RubyCode::Initializer.new
+          end
         end
       end
     end.first
@@ -85,11 +88,15 @@ class TestInitializer < Minitest::Test
     auth_mock = Object.new
     auth_mock.define_singleton_method(:check_authentication) { check_called = true }
     auth_mock.define_singleton_method(:configure_ruby_llm!) { nil }
+    auth_mock.define_singleton_method(:authenticated_provider_names) { [:openai] }
 
-    RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
-      stub_user_config do
-        stub_chat_app do
-          capture_io { RubyCode::Initializer.new }
+    mock_prompt = build_prompt_stub
+    TTY::Prompt.stub(:new, mock_prompt) do
+      RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
+        stub_user_config do
+          stub_chat_app do
+            capture_io { RubyCode::Initializer.new }
+          end
         end
       end
     end
@@ -104,11 +111,15 @@ class TestInitializer < Minitest::Test
     auth_mock = Object.new
     auth_mock.define_singleton_method(:check_authentication) { nil }
     auth_mock.define_singleton_method(:configure_ruby_llm!) { configure_called = true }
+    auth_mock.define_singleton_method(:authenticated_provider_names) { [:openai] }
 
-    RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
-      stub_user_config do
-        stub_chat_app do
-          capture_io { RubyCode::Initializer.new }
+    mock_prompt = build_prompt_stub
+    TTY::Prompt.stub(:new, mock_prompt) do
+      RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
+        stub_user_config do
+          stub_chat_app do
+            capture_io { RubyCode::Initializer.new }
+          end
         end
       end
     end
@@ -152,6 +163,7 @@ class TestInitializer < Minitest::Test
     auth_mock = Object.new
     auth_mock.define_singleton_method(:check_authentication) { nil }
     auth_mock.define_singleton_method(:configure_ruby_llm!) { nil }
+    auth_mock.define_singleton_method(:authenticated_provider_names) { [:openai] }
 
     RubyCode::Auth::AuthManager.stub(:new, auth_mock) do
       stub_chat_app(&block)

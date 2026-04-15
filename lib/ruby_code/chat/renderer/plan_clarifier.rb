@@ -51,26 +51,30 @@ module RubyCode
 
         def render_clarifier_options(frame, area)
           options = @state.clarification_options
-          inner_width = [area.width - 4, 1].max
-          items = options.each_with_index.map do |opt, i|
-            clarifier_wrap_option("[#{i + 1}] #{opt}", inner_width)
-          end
-
-          highlight_style = if @state.clarification_input_mode == :options
-                              @tui.style(bg: :blue, fg: :white, modifiers: [:bold])
-                            else
-                              @tui.style(fg: :dark_gray)
-                            end
 
           widget = @tui.list(
-            items: items,
+            items: wrap_clarifier_items(options, [area.width - 4, 1].max),
             selected_index: @state.clarification_index,
-            highlight_style: highlight_style,
+            highlight_style: clarifier_highlight_style,
             highlight_symbol: "> ",
             scroll_padding: 1,
             block: @tui.block(title: "Options (#{options.size})", borders: [:all])
           )
           frame.render_widget(widget, area)
+        end
+
+        def wrap_clarifier_items(options, width)
+          options.each_with_index.map do |opt, i|
+            clarifier_wrap_option("[#{i + 1}] #{opt}", width)
+          end
+        end
+
+        def clarifier_highlight_style
+          if @state.clarification_input_mode == :options
+            @tui.style(bg: :blue, fg: :white, modifiers: [:bold])
+          else
+            @tui.style(fg: :dark_gray)
+          end
         end
 
         def render_clarifier_input(frame, area)
@@ -102,37 +106,6 @@ module RubyCode
           lines.join("\n")
         end
 
-        # --- Layout helpers ---
-
-        def clarifier_centered_popup(area)
-          vertical = clarifier_centered_vertical(area)
-          clarifier_centered_horizontal(vertical[1])
-        end
-
-        def clarifier_centered_vertical(area)
-          @tui.layout_split(
-            area,
-            direction: :vertical,
-            constraints: [
-              @tui.constraint_percentage(5),
-              @tui.constraint_percentage(90),
-              @tui.constraint_percentage(5)
-            ]
-          )
-        end
-
-        def clarifier_centered_horizontal(area)
-          horizontal = @tui.layout_split(
-            area,
-            direction: :horizontal,
-            constraints: [
-              @tui.constraint_percentage(5),
-              @tui.constraint_percentage(90),
-              @tui.constraint_percentage(5)
-            ]
-          )
-          horizontal[1]
-        end
       end
     end
   end

@@ -8,9 +8,7 @@ module RubyCode
         private
 
         def cmd_agent(rest)
-          arg = rest&.strip&.downcase
-
-          case arg
+          case rest&.strip&.downcase
           when "on"
             enable_agent_mode
           when "off"

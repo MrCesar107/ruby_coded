@@ -4,6 +4,8 @@ require "ruby_llm"
 
 require_relative "command_handler/model_commands"
 require_relative "command_handler/history_commands"
+require_relative "command_handler/token_formatting"
+require_relative "command_handler/token_commands"
 require_relative "command_handler/agent_commands"
 require_relative "command_handler/plan_commands"
 
@@ -15,6 +17,8 @@ module RubyCode
     class CommandHandler
       include ModelCommands
       include HistoryCommands
+      include TokenFormatting
+      include TokenCommands
       include AgentCommands
       include PlanCommands
 

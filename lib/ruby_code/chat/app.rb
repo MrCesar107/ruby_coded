@@ -8,11 +8,14 @@ require_relative "renderer"
 require_relative "command_handler"
 require_relative "llm_bridge"
 require_relative "../auth/credentials_store"
+require_relative "app/event_dispatch"
 
 module RubyCode
   module Chat
     # Main class for the AI chat interface
     class App
+      include EventDispatch
+
       def initialize(model:, user_config: nil)
         @model = model
         @user_config = user_config
@@ -29,25 +32,38 @@ module RubyCode
 
       def run
         RatatuiRuby.run do |tui|
-          @tui = tui
-          @renderer = Renderer.new(tui, @state)
-
-          loop do
-            if @state.dirty?
-              @renderer.draw
-              @state.mark_clean!
-            end
-
-            timeout = @state.streaming? ? STREAMING_POLL_TIMEOUT : IDLE_POLL_TIMEOUT
-            event = @tui.poll_event(timeout: timeout)
-            next if event.none?
-
-            break if dispatch_event(event) == :quit
-          end
+          init_tui(tui)
+          run_event_loop
         end
       end
 
       private
+
+      def init_tui(tui)
+        @tui = tui
+        @renderer = Renderer.new(tui, @state)
+      end
+
+      def run_event_loop
+        loop do
+          refresh_screen
+          event = @tui.poll_event(timeout: poll_timeout)
+          next if event.none?
+
+          break if dispatch_event(event) == :quit
+        end
+      end
+
+      def refresh_screen
+        return unless @state.dirty?
+
+        @renderer.draw
+        @state.mark_clean!
+      end
+
+      def poll_timeout
+        @state.streaming? ? STREAMING_POLL_TIMEOUT : IDLE_POLL_TIMEOUT
+      end
 
       def apply_plugin_extensions!
         RubyCode.plugin_registry.apply_extensions!(
@@ -83,52 +99,6 @@ module RubyCode
         @state.add_message(:system, "Model switched to #{model_name}.")
       end
 
-      def dispatch_event(event)
-        action = @input_handler.process(event)
-        case action
-        when :quit then :quit
-        when :submit then handle_submit
-        when :model_selected then apply_selected_model
-        when :model_select_cancel then @state.exit_model_select!
-        when :cancel_streaming then @llm_bridge.cancel!
-        when :tool_approved then @llm_bridge.approve_tool!
-        when :tool_approved_all then @llm_bridge.approve_all_tools!
-        when :tool_rejected then @llm_bridge.reject_tool!
-        when :plan_clarification_selected
-          handle_plan_clarification_response(@state.selected_clarification_option)
-        when :plan_clarification_custom
-          handle_plan_clarification_response(@state.clarification_custom_input.dup)
-        when :plan_clarification_skip
-          @state.exit_plan_clarification!
-        when :scroll_up, :scroll_down, :scroll_top, :scroll_bottom then handle_scroll(action)
-        end
-      end
-
-      def handle_submit
-        input = @state.consume_input!
-        if input.start_with?("/")
-          @command_handler.handle(input)
-          :quit if @state.should_quit?
-        else
-          @state.add_message(:user, input)
-          @llm_bridge.send_async(input)
-        end
-      end
-
-      def handle_plan_clarification_response(response)
-        @state.exit_plan_clarification!
-        @state.add_message(:user, response)
-        @llm_bridge.send_async(response)
-      end
-
-      def handle_scroll(action)
-        case action
-        when :scroll_up then @state.scroll_up
-        when :scroll_down then @state.scroll_down
-        when :scroll_top then @state.scroll_to_top
-        when :scroll_bottom then @state.scroll_to_bottom
-        end
-      end
     end
   end
 end

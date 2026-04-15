@@ -8,19 +8,12 @@ module RubyCode
         private
 
         def cmd_plan(rest)
-          arg = rest&.strip&.downcase
-
-          case arg
-          when "on"
-            enable_plan_mode
-          when "off"
-            disable_plan_mode(force: false)
-          when "off --force"
-            disable_plan_mode(force: true)
-          when nil, ""
-            show_plan_status
-          else
-            handle_plan_subcommand(rest.strip)
+          case rest&.strip&.downcase
+          when "on"          then enable_plan_mode
+          when "off"         then disable_plan_mode(force: false)
+          when "off --force" then disable_plan_mode(force: true)
+          when nil, ""       then show_plan_status
+          else                    handle_plan_subcommand(rest.strip)
           end
         end
 
@@ -39,16 +32,19 @@ module RubyCode
             return
           end
 
-          if @llm_bridge.agentic_mode
-            @llm_bridge.toggle_agentic_mode!(false)
-            @state.add_message(:system, "Agent mode disabled.")
-          end
-
+          deactivate_agent_if_needed
           @llm_bridge.toggle_plan_mode!(true)
           @state.activate_plan_mode!
           @state.add_message(:system,
                              "Plan mode enabled. Describe what you want to build and the model " \
                              "will help you create a structured plan.")
+        end
+
+        def deactivate_agent_if_needed
+          return unless @llm_bridge.agentic_mode
+
+          @llm_bridge.toggle_agentic_mode!(false)
+          @state.add_message(:system, "Agent mode disabled.")
         end
 
         def disable_plan_mode(force:)
@@ -57,16 +53,20 @@ module RubyCode
             return
           end
 
-          if !force && @state.has_unsaved_plan?
-            @state.add_message(:system,
-                               "You have an unsaved plan. Use /plan save [filename] first, " \
-                               "or /plan off --force to discard.")
-            return
-          end
+          return if unsaved_plan_warned?(force)
 
           @llm_bridge.toggle_plan_mode!(false)
           @state.deactivate_plan_mode!
           @state.add_message(:system, "Plan mode disabled. Switched back to chat mode.")
+        end
+
+        def unsaved_plan_warned?(force)
+          return false if force || !@state.has_unsaved_plan?
+
+          @state.add_message(:system,
+                             "You have an unsaved plan. Use /plan save [filename] first, " \
+                             "or /plan off --force to discard.")
+          true
         end
 
         def show_plan_status
@@ -87,9 +87,12 @@ module RubyCode
           end
 
           filename ||= generate_plan_filename(plan_content)
-          path = File.join(@llm_bridge.project_root, filename)
+          write_plan_file(filename, plan_content)
+        end
 
-          File.write(path, plan_content)
+        def write_plan_file(filename, content)
+          path = File.join(@llm_bridge.project_root, filename)
+          File.write(path, content)
           @state.mark_plan_saved!
           @state.add_message(:system, "Plan saved to #{filename}")
         rescue StandardError => e

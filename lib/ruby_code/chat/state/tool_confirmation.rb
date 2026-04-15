@@ -57,22 +57,11 @@ module RubyCode
         end
 
         def request_tool_confirmation!(tool_name, tool_args, risk_label: "WRITE")
-          args_text = tool_args.map { |k, v| "#{k}: #{v}" }.join(", ")
-          pending_text = "[#{risk_label}] #{tool_name}(#{args_text}) — [y] approve / [n] reject / [a] approve all"
+          pending_text = format_tool_pending_text(tool_name, tool_args, risk_label)
 
           @mutex.synchronize do
-            @pending_tool_name = tool_name
-            @pending_tool_args = tool_args
-            @tool_confirmation_response = nil
-            @mode = :tool_confirmation
-            @messages << {
-              role: :tool_pending,
-              content: String.new(pending_text),
-              timestamp: Time.now,
-              **Messages::ZERO_TOKEN_USAGE
-            }
-            @message_generation += 1
-            @dirty = true
+            set_pending_tool(tool_name, tool_args)
+            append_tool_pending_message(pending_text)
           end
 
           scroll_to_bottom
@@ -80,17 +69,8 @@ module RubyCode
 
         def resolve_tool_confirmation!(decision)
           @mutex.synchronize do
-            last_pending = @messages.reverse.find { |m| m[:role] == :tool_pending }
-            if last_pending
-              label = decision == :approved ? "approved" : "rejected"
-              last_pending[:role] = :tool_call
-              last_pending[:content] = last_pending[:content].sub(/ — \[y\].*/, " — #{label}")
-            end
-
-            @pending_tool_name = nil
-            @pending_tool_args = nil
-            @tool_confirmation_response = nil
-            @mode = :chat
+            finalize_pending_message(decision)
+            reset_pending_tool
             @message_generation += 1
             @dirty = true
           end
@@ -98,12 +78,50 @@ module RubyCode
 
         def clear_tool_confirmation!
           @mutex.synchronize do
-            @pending_tool_name = nil
-            @pending_tool_args = nil
-            @tool_confirmation_response = nil
-            @mode = :chat
+            reset_pending_tool
             @dirty = true
           end
+        end
+
+        private
+
+        def format_tool_pending_text(tool_name, tool_args, risk_label)
+          args_text = tool_args.map { |k, v| "#{k}: #{v}" }.join(", ")
+          "[#{risk_label}] #{tool_name}(#{args_text}) — [y] approve / [n] reject / [a] approve all"
+        end
+
+        def finalize_pending_message(decision)
+          last_pending = @messages.reverse.find { |m| m[:role] == :tool_pending }
+          return unless last_pending
+
+          label = decision == :approved ? "approved" : "rejected"
+          last_pending[:role] = :tool_call
+          last_pending[:content] = last_pending[:content].sub(/ — \[y\].*/, " — #{label}")
+        end
+
+        def reset_pending_tool
+          @pending_tool_name = nil
+          @pending_tool_args = nil
+          @tool_confirmation_response = nil
+          @mode = :chat
+        end
+
+        def set_pending_tool(tool_name, tool_args)
+          @pending_tool_name = tool_name
+          @pending_tool_args = tool_args
+          @tool_confirmation_response = nil
+          @mode = :tool_confirmation
+        end
+
+        def append_tool_pending_message(pending_text)
+          @messages << {
+            role: :tool_pending,
+            content: String.new(pending_text),
+            timestamp: Time.now,
+            **Messages::ZERO_TOKEN_USAGE
+          }
+          @message_generation += 1
+          @dirty = true
         end
       end
     end

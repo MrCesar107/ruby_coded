@@ -235,6 +235,8 @@ class TestHistoryCommands < Minitest::Test
 
   class HistoryCommandsHost
     include RubyCode::Chat::CommandHandler::HistoryCommands
+    include RubyCode::Chat::CommandHandler::TokenCommands
+    include RubyCode::Chat::CommandHandler::TokenFormatting
 
     def initialize(state)
       @state = state

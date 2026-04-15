@@ -21,14 +21,19 @@ module RubyCode
         return { error: "File not found: #{path}" } unless File.exist?(full_path)
         return { error: "Not a file: #{path}" } unless File.file?(full_path)
 
+        apply_edit(path, full_path, old_text, new_text)
+      rescue SystemCallError => e
+        { error: "Failed to edit #{path}: #{e.message}" }
+      end
+
+      private
+
+      def apply_edit(path, full_path, old_text, new_text)
         original = File.read(full_path)
         return { error: "old_text not found in #{path}" } unless original.include?(old_text)
 
-        updated = original.sub(old_text, new_text)
-        File.write(full_path, updated)
+        File.write(full_path, original.sub(old_text, new_text))
         "File edited: #{path}"
-      rescue SystemCallError => e
-        { error: "Failed to edit #{path}: #{e.message}" }
       end
     end
   end

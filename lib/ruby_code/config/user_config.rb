@@ -67,17 +67,28 @@ module RubyCode
       legacy_path = File.join(Dir.pwd, ".config.yaml")
       return unless File.exist?(legacy_path) && !File.exist?(@config_path)
 
+      legacy_config = load_legacy_config(legacy_path)
+      write_migrated_config(legacy_config, legacy_path)
+    end
+
+    def load_legacy_config(legacy_path)
       FileUtils.mkdir_p(@config_dir)
-      legacy_config = YAML.load_file(legacy_path)
+      config = YAML.load_file(legacy_path)
+      normalize_legacy_permissions(config)
+      config
+    end
 
-      if legacy_config.is_a?(Hash) && legacy_config["user_config"]
-        if legacy_config["user_config"]["current_directory_permission"]
-          legacy_config["user_config"]["trusted_directories"] = [resolve_path(Dir.pwd)]
-        end
-        legacy_config["user_config"].delete("current_directory_permission")
+    def normalize_legacy_permissions(config)
+      return unless config.is_a?(Hash) && config["user_config"]
+
+      if config["user_config"]["current_directory_permission"]
+        config["user_config"]["trusted_directories"] = [resolve_path(Dir.pwd)]
       end
+      config["user_config"].delete("current_directory_permission")
+    end
 
-      File.write(@config_path, legacy_config.to_yaml)
+    def write_migrated_config(config, legacy_path)
+      File.write(@config_path, config.to_yaml)
       File.delete(legacy_path)
     end
 

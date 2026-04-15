@@ -35,13 +35,11 @@ module RubyCode
       private
 
       def run_with_timeout(command)
-        pid = nil
         stdin, stdout_io, stderr_io, wait_thr = Open3.popen3(command, chdir: @project_root)
-        pid = wait_thr.pid
         stdin.close
 
         unless wait_thr.join(TIMEOUT_SECONDS)
-          kill_process(pid)
+          kill_process(wait_thr.pid)
           raise StandardError, "Command timed out after #{TIMEOUT_SECONDS} seconds"
         end
 

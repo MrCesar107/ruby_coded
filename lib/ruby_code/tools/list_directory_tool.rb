@@ -27,6 +27,12 @@ module RubyCode
         return { error: "Directory not found: #{path}" } unless File.exist?(full_path)
         return { error: "Not a directory: #{path}" } unless File.directory?(full_path)
 
+        list_entries(full_path, include_hidden)
+      end
+
+      private
+
+      def list_entries(full_path, include_hidden)
         children = Dir.children(full_path).sort
         children = children.reject { |name| ignored_entry?(name) } unless include_hidden
 
@@ -38,8 +44,6 @@ module RubyCode
 
         entries.empty? ? "(empty directory)" : entries.join("\n")
       end
-
-      private
 
       def ignored_entry?(name)
         IGNORED_DIRS.include?(name)

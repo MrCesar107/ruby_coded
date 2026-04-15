@@ -9,22 +9,27 @@ module RubyCode
         private
 
         def render_status_bar(frame, area)
+          widget = @tui.paragraph(text: status_bar_text(area.width))
+          frame.render_widget(widget, area)
+        end
+
+        def status_bar_text(width)
+          left = status_bar_left
+          right = "#{@state.model} | #{format_cost(@state.total_session_cost)} "
+          center_pad = [width - left.length - right.length, 1].max
+          "#{left}#{" " * center_pad}#{right}"
+        end
+
+        def status_bar_left
           input_tok = @state.total_input_tokens
           output_tok = @state.total_output_tokens
           thinking_tok = @state.total_thinking_tokens
           total_tok = input_tok + output_tok + thinking_tok
-          cost = @state.total_session_cost
-          model_name = @state.model.to_s
 
           left = " ↑#{format_number(input_tok)} ↓#{format_number(output_tok)}"
-          left << " 💭#{format_number(thinking_tok)}" if thinking_tok > 0
+          left << " 💭#{format_number(thinking_tok)}" if thinking_tok.positive?
           left << " (#{format_number(total_tok)} tokens)"
-          right = "#{model_name} | #{format_cost(cost)} "
-          center_pad = [area.width - left.length - right.length, 1].max
-          text = "#{left}#{" " * center_pad}#{right}"
-
-          widget = @tui.paragraph(text: text)
-          frame.render_widget(widget, area)
+          left
         end
 
         def format_number(num)

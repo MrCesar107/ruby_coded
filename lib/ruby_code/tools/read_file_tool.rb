@@ -25,22 +25,29 @@ module RubyCode
         return { error: "File not found: #{path}" } unless File.exist?(full_path)
         return { error: "Not a file: #{path}" } unless File.file?(full_path)
 
+        read_file_section(full_path, offset, max_lines)
+      end
+
+      private
+
+      def read_file_section(full_path, offset, max_lines)
         lines = File.readlines(full_path)
         return { error: "File is empty" } if lines.empty?
 
-        total = lines.length
-        start_line = [(offset || 1), 1].max
-        limit = max_lines || DEFAULT_MAX_LINES
-        start_idx = start_line - 1
-        selected = lines[start_idx, limit] || []
+        start_line = [offset || 1, 1].max
+        selected = lines[start_line - 1, max_lines || DEFAULT_MAX_LINES] || []
 
+        format_lines_output(selected, start_line, lines.length)
+      end
+
+      def format_lines_output(selected, start_line, total)
         result = selected.join
-        remaining = total - (start_idx + selected.length)
-        if remaining > 0
-          result << "\n... (showing lines #{start_line}-#{start_idx + selected.length} of #{total}. " \
-                    "#{remaining} lines remaining, use offset to read more)"
-        end
-        result
+        end_line = start_line - 1 + selected.length
+        remaining = total - end_line
+        return result unless remaining.positive?
+
+        result << "\n... (showing lines #{start_line}-#{end_line} of #{total}. " \
+                  "#{remaining} lines remaining, use offset to read more)"
       end
     end
   end

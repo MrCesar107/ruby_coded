@@ -409,6 +409,8 @@ class TestRendererChatPanel < Minitest::Test
 
   class ChatPanelHost
     include RubyCode::Chat::Renderer::ChatPanel
+    include RubyCode::Chat::Renderer::ChatPanelInput
+    include RubyCode::Chat::Renderer::ChatPanelThinking
 
     def initialize(tui, state)
       @tui = tui

@@ -28,16 +28,14 @@ module RubyCode
 
       def initialize(project_root:)
         @project_root = project_root
-        @tools_cache = nil
-        @readonly_tools_cache = nil
       end
 
       def build_tools
-        @tools_cache ||= TOOL_CLASSES.map { |klass| klass.new(project_root: @project_root) }
+        @build_tools ||= TOOL_CLASSES.map { |klass| klass.new(project_root: @project_root) }
       end
 
       def build_readonly_tools
-        @readonly_tools_cache ||= READONLY_TOOL_CLASSES.map { |klass| klass.new(project_root: @project_root) }
+        @build_readonly_tools ||= READONLY_TOOL_CLASSES.map { |klass| klass.new(project_root: @project_root) }
       end
 
       def safe_tool?(tool_call_name)

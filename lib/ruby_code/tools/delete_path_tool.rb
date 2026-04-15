@@ -20,17 +20,21 @@ module RubyCode
         return { error: "Path not found: #{path}" } unless File.exist?(full_path)
         return { error: "Cannot delete the project root" } if full_path == @project_root
 
+        perform_delete(path, full_path)
+      rescue SystemCallError => e
+        { error: "Failed to delete #{path}: #{e.message}" }
+      end
+
+      private
+
+      def perform_delete(path, full_path)
         if File.directory?(full_path)
           delete_directory(path, full_path)
         else
           File.delete(full_path)
           "Deleted file: #{path}"
         end
-      rescue SystemCallError => e
-        { error: "Failed to delete #{path}: #{e.message}" }
       end
-
-      private
 
       def delete_directory(path, full_path)
         entries = Dir.children(full_path)

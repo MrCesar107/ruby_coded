@@ -52,17 +52,25 @@ module RubyCode
       end
 
       def deduplicate_latest_aliases(models)
-        latest_families = Set.new
+        latest_families = collect_latest_families(models)
+        return models if latest_families.empty?
+
+        reject_dated_snapshots(models, latest_families)
+      end
+
+      def collect_latest_families(models)
+        families = Set.new
         models.each do |m|
           id = model_id(m)
           next unless id.end_with?("-latest")
 
           family = model_family(m)
-          latest_families.add("#{model_provider(m)}:#{family}") if family && !family.empty?
+          families.add("#{model_provider(m)}:#{family}") if family && !family.empty?
         end
+        families
+      end
 
-        return models if latest_families.empty?
-
+      def reject_dated_snapshots(models, latest_families)
         models.reject do |m|
           id = model_id(m)
           next false if id.end_with?("-latest")
@@ -98,7 +106,8 @@ module RubyCode
       end
 
       private_class_method :reject_deprecated_patterns, :reject_stale,
-                           :deduplicate_latest_aliases, :model_id,
+                           :deduplicate_latest_aliases, :collect_latest_families,
+                           :reject_dated_snapshots, :model_id,
                            :model_created_at, :model_family,
                            :model_provider, :snapshot_with_date?
     end

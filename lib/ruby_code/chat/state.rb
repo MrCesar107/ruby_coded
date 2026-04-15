@@ -2,6 +2,8 @@
 
 require_relative "state/model_selection"
 require_relative "state/messages"
+require_relative "state/message_assistant"
+require_relative "state/message_token_tracking"
 require_relative "state/scrollable"
 require_relative "state/tool_confirmation"
 require_relative "state/plan_tracking"
@@ -13,6 +15,8 @@ module RubyCode
     class State
       include ModelSelection
       include Messages
+      include MessageAssistant
+      include MessageTokenTracking
       include Scrollable
       include ToolConfirmation
       include PlanTracking

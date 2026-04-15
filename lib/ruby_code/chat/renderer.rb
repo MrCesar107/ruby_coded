@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 require_relative "renderer/chat_panel"
+require_relative "renderer/chat_panel_thinking"
+require_relative "renderer/chat_panel_input"
 require_relative "renderer/model_selector"
+require_relative "renderer/plan_clarifier_layout"
 require_relative "renderer/plan_clarifier"
 require_relative "renderer/status_bar"
 
@@ -10,7 +13,10 @@ module RubyCode
     # This class manages the rendering of the UI elements
     class Renderer
       include ChatPanel
+      include ChatPanelThinking
+      include ChatPanelInput
       include ModelSelector
+      include PlanClarifierLayout
       include PlanClarifier
       include StatusBar
 
