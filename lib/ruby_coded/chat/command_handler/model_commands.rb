@@ -63,21 +63,21 @@ module RubyCoded
           return fetch_chat_models unless @credentials_store
 
           models = []
-
           Auth::AuthManager::PROVIDERS.each_key do |name|
             creds = @credentials_store.retrieve(name)
-            next unless creds
-
-            if name == :openai && creds["auth_method"] == "oauth"
-              models.concat(CodexModels.all)
-            else
-              provider_models = RubyLLM.models.by_provider(name).chat_models.to_a
-              models.concat(provider_models)
-            end
+            models.concat(models_for_provider(name, creds)) if creds
           end
           models
         rescue StandardError
           fetch_chat_models
+        end
+
+        def models_for_provider(name, creds)
+          if name == :openai && creds["auth_method"] == "oauth"
+            CodexModels.all
+          else
+            RubyLLM.models.by_provider(name).chat_models.to_a
+          end
         end
 
         def fetch_chat_models

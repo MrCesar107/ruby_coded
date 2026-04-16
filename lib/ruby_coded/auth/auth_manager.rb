@@ -70,8 +70,7 @@ module RubyCoded
             next if name == :openai && credentials["auth_method"] == "oauth"
 
             credentials = refresh_if_expired(name, provider, credentials)
-            key = extract_api_key(credentials)
-            config.send("#{provider.ruby_llm_key}=", key)
+            config.send("#{provider.ruby_llm_key}=", extract_api_key(credentials))
           end
         end
       end
@@ -83,9 +82,7 @@ module RubyCoded
       end
 
       def choose_provider
-        prompt.select("Please select the AI provider you want to log in:",
-                      configured_providers,
-                      per_page: 10)
+        prompt.select("Please select the AI provider you want to log in:", configured_providers, per_page: 10)
       end
 
       def strategy_for(provider)

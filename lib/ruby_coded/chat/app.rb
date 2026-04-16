@@ -90,13 +90,8 @@ module RubyCoded
       end
 
       def build_command_handler
-        CommandHandler.new(
-          @state,
-          llm_bridge: @llm_bridge,
-          user_config: @user_config,
-          credentials_store: @credentials_store,
-          auth_manager: @auth_manager
-        )
+        CommandHandler.new(@state, llm_bridge: @llm_bridge, user_config: @user_config,
+                                   credentials_store: @credentials_store, auth_manager: @auth_manager)
       end
 
       def apply_selected_model
@@ -123,9 +118,7 @@ module RubyCoded
         if openai_creds && openai_creds["auth_method"] == "oauth"
           @state.codex_mode = true
           ensure_valid_codex_model!
-          CodexBridge.new(@state,
-                          credentials_store: @credentials_store,
-                          auth_manager: @auth_manager)
+          CodexBridge.new(@state, credentials_store: @credentials_store, auth_manager: @auth_manager)
         else
           @state.codex_mode = false
           LLMBridge.new(@state)

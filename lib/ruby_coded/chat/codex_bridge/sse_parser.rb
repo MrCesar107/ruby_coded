@@ -6,38 +6,41 @@ module RubyCoded
       # Parses Server-Sent Events from the Codex streaming response and
       # dispatches content deltas, tool calls, and completion signals.
       module SSEParser
+        StreamContext = Struct.new(
+          :assistant_text, :pending_tool_calls, :buffer, :raw_body, :status, keyword_init: true
+        )
+
         private
 
         def perform_codex_request(input)
           ensure_token_fresh!
-          body = build_request_body
+          ctx = StreamContext.new(assistant_text: +"", pending_tool_calls: [], buffer: +"", raw_body: +"", status: nil)
+          execute_streaming_post(ctx)
+          finalize_response(ctx.assistant_text)
+          process_pending_tool_calls(ctx.pending_tool_calls, input) if ctx.pending_tool_calls.any?
+        end
 
-          assistant_text = +""
-          pending_tool_calls = []
-          buffer = +""
-          raw_body = +""
-          response_status = nil
+        def execute_streaming_post(ctx)
+          response = post_streaming_request(ctx)
+          ctx.status ||= response.status
+          handle_http_error(ctx.status, ctx.raw_body) unless (200..299).cover?(ctx.status)
+        end
 
-          response = @conn.post(CODEX_RESPONSES_PATH) do |req|
+        def post_streaming_request(ctx)
+          @conn.post(CODEX_RESPONSES_PATH) do |req|
             req.headers = codex_headers
-            req.body = body.to_json
-            req.options.on_data = proc do |chunk, _size, env|
-              response_status ||= env&.status
-              raw_body << chunk
-              unless @cancel_requested || (response_status && !(200..299).cover?(response_status))
-                buffer << chunk
-                process_sse_buffer(buffer, assistant_text, pending_tool_calls)
-              end
-            end
+            req.body = build_request_body.to_json
+            req.options.on_data = proc { |chunk, _size, env| handle_stream_chunk(ctx, chunk, env) }
           end
+        end
 
-          response_status ||= response.status
-          unless (200..299).cover?(response_status)
-            handle_http_error(response_status, raw_body)
-          end
+        def handle_stream_chunk(ctx, chunk, env)
+          ctx.status ||= env&.status
+          ctx.raw_body << chunk
+          return if @cancel_requested || (ctx.status && !(200..299).cover?(ctx.status))
 
-          finalize_response(assistant_text, pending_tool_calls)
-          process_pending_tool_calls(pending_tool_calls, input) if pending_tool_calls.any?
+          ctx.buffer << chunk
+          process_sse_buffer(ctx.buffer, ctx.assistant_text, ctx.pending_tool_calls)
         end
 
         def process_sse_buffer(buffer, assistant_text, pending_tool_calls)
@@ -62,17 +65,11 @@ module RubyCoded
         end
 
         def dispatch_sse_event(event, assistant_text, pending_tool_calls)
-          type = event["type"]
-
-          case type
-          when "response.output_text.delta"
-            handle_text_delta(event, assistant_text)
-          when "response.function_call_arguments.delta"
-            handle_function_args_delta(event, pending_tool_calls)
-          when "response.function_call_arguments.done"
-            handle_function_call_done(event, pending_tool_calls)
-          when "response.output_item.added"
-            handle_output_item_added(event, pending_tool_calls)
+          case event["type"]
+          when "response.output_text.delta" then handle_text_delta(event, assistant_text)
+          when "response.function_call_arguments.delta" then handle_function_args_delta(event, pending_tool_calls)
+          when "response.function_call_arguments.done" then handle_function_call_done(event, pending_tool_calls)
+          when "response.output_item.added" then handle_output_item_added(event, pending_tool_calls)
           end
         end
 
@@ -99,8 +96,7 @@ module RubyCoded
           delta = event["delta"]
           return unless delta.is_a?(String)
 
-          current = pending_tool_calls.last
-          current[:arguments] << delta if current
+          pending_tool_calls.last&.tap { |c| c[:arguments] << delta }
         end
 
         def handle_function_call_done(event, pending_tool_calls)
@@ -108,32 +104,25 @@ module RubyCoded
           return unless call_id
 
           tc = pending_tool_calls.find { |c| c[:call_id] == call_id }
-          return unless tc
-
-          args_str = event["arguments"] || tc[:arguments]
-          tc[:arguments] = args_str
+          tc[:arguments] = event["arguments"] || tc[:arguments] if tc
         end
 
-        def finalize_response(assistant_text, _pending_tool_calls)
-          return if assistant_text.empty?
-
-          @conversation_history << { role: "assistant", content: assistant_text }
+        def finalize_response(assistant_text)
+          @conversation_history << { role: "assistant", content: assistant_text } unless assistant_text.empty?
         end
 
         def handle_http_error(status, body_text)
-          parsed = begin
-                     JSON.parse(body_text)
-                   rescue StandardError
-                     nil
-                   end
-
-          detail = if parsed.is_a?(Hash)
-                     parsed.dig("error", "message") || parsed["detail"] || parsed["message"] || body_text[0, 300]
-                   else
-                     body_text[0, 300]
-                   end
-
+          detail = extract_error_detail(body_text)
           raise CodexAPIError.new(status, detail)
+        end
+
+        def extract_error_detail(body_text)
+          parsed = JSON.parse(body_text)
+          return body_text[0, 300] unless parsed.is_a?(Hash)
+
+          parsed.dig("error", "message") || parsed["detail"] || parsed["message"] || body_text[0, 300]
+        rescue StandardError
+          body_text[0, 300]
         end
 
         def parse_json(str)

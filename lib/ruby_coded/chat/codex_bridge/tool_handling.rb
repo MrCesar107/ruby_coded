@@ -1,18 +1,22 @@
 # frozen_string_literal: true
 
+require_relative "tool_approval"
+
 module RubyCoded
   module Chat
     class CodexBridge
       # Handles tool call execution, confirmation, and the multi-turn loop
       # for agentic mode over the Codex Responses API.
       module ToolHandling
+        include ToolApproval
+
         private
 
-        def process_pending_tool_calls(pending_tool_calls, original_input)
-          pending_tool_calls.each do |tc|
+        def process_pending_tool_calls(pending_tool_calls, _original_input)
+          pending_tool_calls.each do |tool_call|
             break if @cancel_requested
 
-            execute_tool_call(tc)
+            execute_tool_call(tool_call)
           end
 
           return if @cancel_requested
@@ -21,9 +25,9 @@ module RubyCoded
           continue_after_tools
         end
 
-        def execute_tool_call(tc)
-          name = tc[:name]
-          args = parse_tool_arguments(tc[:arguments])
+        def execute_tool_call(tool_call)
+          name = tool_call[:name]
+          args = parse_tool_arguments(tool_call[:arguments])
           display_name = short_tool_name(name)
           risk = @tool_registry.risk_level_for(name)
 
@@ -31,9 +35,9 @@ module RubyCoded
           check_tool_limits!
           warn_approaching_limit
 
-          request_approval(tc, display_name, args, risk)
+          request_approval(tool_call, display_name, args, risk)
           result = run_tool(name, args)
-          record_tool_result(tc, result)
+          record_tool_result(tool_call, result)
         end
 
         def parse_tool_arguments(args_str)
@@ -44,54 +48,11 @@ module RubyCoded
           {}
         end
 
-        def request_approval(tc, display_name, args, risk)
-          args_summary = args.map { |k, v| "#{k}: #{v}" }.join(", ")
-
-          if risk == Tools::BaseTool::SAFE_RISK || @state.auto_approve_tools?
-            @state.add_message(:tool_call, "[#{display_name}] #{args_summary}")
-          else
-            risk_label = risk == Tools::BaseTool::DANGEROUS_RISK ? "DANGEROUS" : "WRITE"
-            @state.request_tool_confirmation!(display_name, args, risk_label: risk_label)
-            decision = poll_tool_decision
-            apply_tool_decision(decision, display_name)
-          end
-        end
-
-        def poll_tool_decision
-          @state.mutex.synchronize do
-            loop do
-              return :cancelled if @cancel_requested
-
-              case @state.instance_variable_get(:@tool_confirmation_response)
-              when :approved then return :approved
-              when :rejected then return :rejected
-              end
-
-              @state.tool_cv.wait(@state.mutex, 0.1)
-            end
-          end
-        end
-
-        def apply_tool_decision(decision, display_name)
-          case decision
-          when :cancelled
-            @state.clear_tool_confirmation!
-            raise Tools::AgentCancelledError, "Operation cancelled by user"
-          when :approved
-            @state.resolve_tool_confirmation!(:approved)
-          when :rejected
-            @state.resolve_tool_confirmation!(:rejected)
-            raise Tools::ToolRejectedError, "User rejected #{display_name}"
-          end
-        end
-
         def run_tool(name, args)
           tool_instances = @agentic_mode ? @tool_registry.build_tools : @tool_registry.build_readonly_tools
           tool = tool_instances.find { |t| tool_name_match?(t, name) }
 
-          unless tool
-            return { error: "Unknown tool: #{name}" }
-          end
+          return { error: "Unknown tool: #{name}" } unless tool
 
           symbolized = args.transform_keys(&:to_sym)
           tool.execute(**symbolized)
@@ -103,23 +64,25 @@ module RubyCoded
           tool.name == name || tool.name.split("--").last == name.split("--").last
         end
 
-        def record_tool_result(tc, result)
-          text = result.to_s
-          if text.length > MAX_TOOL_RESULT_CHARS
-            text = "#{text[0, MAX_TOOL_RESULT_CHARS]}\n... (truncated, #{text.length} total characters)"
-          end
-          @state.add_message(:tool_result, text)
+        def record_tool_result(tool_call, result)
+          @state.add_message(:tool_result, truncate_result(result))
+          record_tool_call_history(tool_call, result)
+        end
 
+        def truncate_result(result)
+          text = result.to_s
+          return text if text.length <= MAX_TOOL_RESULT_CHARS
+
+          "#{text[0, MAX_TOOL_RESULT_CHARS]}\n... (truncated, #{text.length} total characters)"
+        end
+
+        def record_tool_call_history(tool_call, result)
           @conversation_history << {
-            type: "function_call",
-            call_id: tc[:call_id],
-            name: tc[:name],
-            arguments: tc[:arguments]
+            type: "function_call", call_id: tool_call[:call_id],
+            name: tool_call[:name], arguments: tool_call[:arguments]
           }
           @conversation_history << {
-            type: "function_call_output",
-            call_id: tc[:call_id],
-            output: result.to_s
+            type: "function_call_output", call_id: tool_call[:call_id], output: result.to_s
           }
         end
 
@@ -147,10 +110,10 @@ module RubyCoded
         end
 
         def warn_approaching_limit
-          warning_at = (MAX_TOTAL_TOOL_ROUNDS * TOOL_ROUNDS_WARNING_THRESHOLD).to_i
-          return unless @tool_call_count == warning_at
+          threshold = (MAX_TOTAL_TOOL_ROUNDS * TOOL_ROUNDS_WARNING_THRESHOLD).to_i
+          return unless @tool_call_count == threshold
 
-          remaining = MAX_TOTAL_TOOL_ROUNDS - @tool_call_count
+          remaining = MAX_TOTAL_TOOL_ROUNDS - threshold
           @state.add_message(:system,
                              "Approaching total tool call limit: #{remaining} calls remaining. " \
                              "Prioritize completing the most important work.")

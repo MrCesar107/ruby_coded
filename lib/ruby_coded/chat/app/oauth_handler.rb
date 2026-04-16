@@ -64,13 +64,9 @@ module RubyCoded
 
         def build_oauth_url(provider, challenge, state)
           params = {
-            client_id: provider.client_id,
-            redirect_uri: provider.redirect_uri,
-            response_type: "code",
-            scope: provider.scopes,
-            code_challenge: challenge,
-            code_challenge_method: "S256",
-            state: state
+            client_id: provider.client_id, redirect_uri: provider.redirect_uri,
+            response_type: "code", scope: provider.scopes, code_challenge: challenge,
+            code_challenge_method: "S256", state: state
           }
           params.merge!(provider.codex_auth_params) if provider.respond_to?(:codex_auth_params)
           "#{provider.auth_url}?#{URI.encode_www_form(params)}"

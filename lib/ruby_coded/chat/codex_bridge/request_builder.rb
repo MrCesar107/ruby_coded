@@ -12,6 +12,9 @@ module RubyCoded
           "OpenAI-Beta" => "responses=experimental"
         }.freeze
 
+        DEFAULT_INSTRUCTIONS = "You are a helpful coding assistant. " \
+                               "Answer concisely and provide code examples when relevant."
+
         private
 
         def codex_headers
@@ -24,52 +27,50 @@ module RubyCoded
           )
         end
 
-        DEFAULT_INSTRUCTIONS = "You are a helpful coding assistant. " \
-          "Answer concisely and provide code examples when relevant."
-
         def build_request_body
-          body = {
-            model: @model,
-            instructions: build_instructions,
-            input: build_input_array,
-            store: false,
-            stream: true,
-            reasoning: { effort: "medium", summary: "auto" },
-            text: { verbosity: "medium" },
-            include: ["reasoning.encrypted_content"]
-          }
-
+          body = base_request_body
           body[:tools] = build_tools_spec if @agentic_mode || @plan_mode
           body
         end
 
+        def base_request_body
+          {
+            model: @model, instructions: build_instructions,
+            input: build_input_array, store: false, stream: true,
+            reasoning: { effort: "medium", summary: "auto" },
+            text: { verbosity: "medium" },
+            include: ["reasoning.encrypted_content"]
+          }
+        end
+
         def build_input_array
-          @conversation_history.map do |msg|
-            case msg[:type]
-            when "function_call"
-              {
-                type: "function_call",
-                name: msg[:name],
-                arguments: msg[:arguments].is_a?(String) ? msg[:arguments] : msg[:arguments].to_json,
-                call_id: msg[:call_id]
-              }
-            when "function_call_output"
-              {
-                type: "function_call_output",
-                call_id: msg[:call_id],
-                output: msg[:output].to_s
-              }
-            else
-              { role: msg[:role], content: msg[:content].to_s }
-            end
+          @conversation_history.map { |msg| format_history_message(msg) }
+        end
+
+        def format_history_message(msg)
+          case msg[:type]
+          when "function_call" then format_function_call(msg)
+          when "function_call_output" then format_function_output(msg)
+          else { role: msg[:role], content: msg[:content].to_s }
           end
+        end
+
+        def format_function_call(msg)
+          {
+            type: "function_call", name: msg[:name],
+            arguments: msg[:arguments].is_a?(String) ? msg[:arguments] : msg[:arguments].to_json,
+            call_id: msg[:call_id]
+          }
+        end
+
+        def format_function_output(msg)
+          { type: "function_call_output", call_id: msg[:call_id], output: msg[:output].to_s }
         end
 
         def build_instructions
           if @agentic_mode
             Tools::SystemPrompt.build(
-              project_root: @project_root,
-              max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
+              project_root: @project_root, max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
               max_total_rounds: MAX_TOTAL_TOOL_ROUNDS
             )
           elsif @plan_mode
