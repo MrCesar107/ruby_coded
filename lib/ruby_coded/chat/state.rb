@@ -26,7 +26,7 @@ module RubyCoded
 
       attr_reader :input_buffer, :cursor_position, :input_scroll_offset, :messages, :scroll_offset,
                   :mode, :model_list, :model_select_index, :model_select_filter,
-                  :streaming, :mutex
+                  :streaming, :mutex, :tui_suspend_reason
       attr_accessor :model, :should_quit
 
       MIN_RENDER_INTERVAL = 0.05
@@ -197,10 +197,6 @@ module RubyCoded
 
       def tui_suspend_requested?
         !@tui_suspend_reason.nil?
-      end
-
-      def tui_suspend_reason
-        @tui_suspend_reason
       end
 
       def tui_suspend_metadata

@@ -37,14 +37,18 @@ module RubyCoded
           render_chat_panel(frame, chat_area)
           render_status_bar(frame, status_area)
           render_input_panel(frame, input_area)
-          render_model_selector(frame, chat_area) if @state.model_select?
-          render_plan_clarifier(frame, chat_area) if @state.plan_clarification?
-          render_login_flow(frame, chat_area) if @state.login_active?
-          render_plugin_overlays(frame, chat_area, input_area)
+          render_overlays(frame, chat_area, input_area)
         end
       end
 
       private
+
+      def render_overlays(frame, chat_area, input_area)
+        render_model_selector(frame, chat_area) if @state.model_select?
+        render_plan_clarifier(frame, chat_area) if @state.plan_clarification?
+        render_login_flow(frame, chat_area) if @state.login_active?
+        render_plugin_overlays(frame, chat_area, input_area)
+      end
 
       # Calls each plugin's render method in registration order.
       def render_plugin_overlays(frame, chat_area, input_area)

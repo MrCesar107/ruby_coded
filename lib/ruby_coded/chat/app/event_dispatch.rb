@@ -5,20 +5,27 @@ module RubyCoded
     class App
       # Routes TUI events to the appropriate handler methods.
       module EventDispatch
+        PLAN_ACTIONS = %i[plan_clarification_selected plan_clarification_custom plan_clarification_skip].freeze
+        LOGIN_ACTIONS = %i[
+          login_provider_selected login_method_selected login_key_submitted login_oauth_cancel login_cancel
+        ].freeze
+
         private
 
         def dispatch_event(event)
           action = @input_handler.process(event)
+          return :quit if action == :quit
+
+          route_action(action)
+        end
+
+        def route_action(action)
           case action
-          when :quit then :quit
           when :submit then handle_submit
           when :model_selected, :model_select_cancel then dispatch_model_action(action)
           when :cancel_streaming, :tool_approved, :tool_approved_all, :tool_rejected then dispatch_llm_action(action)
-          when :plan_clarification_selected, :plan_clarification_custom, :plan_clarification_skip
-            dispatch_plan_clarification(action)
-          when :login_provider_selected, :login_method_selected,
-               :login_key_submitted, :login_oauth_cancel, :login_cancel
-            dispatch_login_action(action)
+          when *PLAN_ACTIONS then dispatch_plan_clarification(action)
+          when *LOGIN_ACTIONS then dispatch_login_action(action)
           when :scroll_up, :scroll_down, :scroll_top, :scroll_bottom then handle_scroll(action)
           end
         end

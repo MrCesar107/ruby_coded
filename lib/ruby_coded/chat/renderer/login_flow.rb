@@ -25,17 +25,6 @@ module RubyCoded
           render_login_list(frame, list_area, title)
         end
 
-        def login_select_layout(popup_area)
-          @tui.layout_split(
-            popup_area,
-            direction: :vertical,
-            constraints: [
-              @tui.constraint_length(3),
-              @tui.constraint_fill(1)
-            ]
-          )
-        end
-
         def render_login_hint(frame, area)
           widget = @tui.paragraph(
             text: "↑↓ navigate, Enter select, Esc cancel",
@@ -66,18 +55,6 @@ module RubyCoded
           render_login_api_key_error(frame, error_area)
         end
 
-        def login_api_key_layout(popup_area)
-          @tui.layout_split(
-            popup_area,
-            direction: :vertical,
-            constraints: [
-              @tui.constraint_length(5),
-              @tui.constraint_length(3),
-              @tui.constraint_fill(1)
-            ]
-          )
-        end
-
         def render_login_api_key_info(frame, area, provider)
           console = provider.respond_to?(:console_url) ? provider.console_url : ""
           text = "Generate your API key at:\n#{console}"
@@ -100,7 +77,7 @@ module RubyCoded
 
         def render_login_api_key_error(frame, area)
           error = @state.login_error
-          text = error ? error : ""
+          text = error || ""
           style = error ? @tui.style(fg: :red) : @tui.style(fg: :dark_gray)
           widget = @tui.paragraph(
             text: text,

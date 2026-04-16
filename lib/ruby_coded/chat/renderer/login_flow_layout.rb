@@ -36,6 +36,29 @@ module RubyCoded
           )
           horizontal[1]
         end
+
+        def login_select_layout(popup_area)
+          @tui.layout_split(
+            popup_area,
+            direction: :vertical,
+            constraints: [
+              @tui.constraint_length(3),
+              @tui.constraint_fill(1)
+            ]
+          )
+        end
+
+        def login_api_key_layout(popup_area)
+          @tui.layout_split(
+            popup_area,
+            direction: :vertical,
+            constraints: [
+              @tui.constraint_length(5),
+              @tui.constraint_length(3),
+              @tui.constraint_fill(1)
+            ]
+          )
+        end
       end
     end
   end

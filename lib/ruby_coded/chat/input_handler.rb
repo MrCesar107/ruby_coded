@@ -3,6 +3,7 @@
 require "ratatui_ruby"
 
 require_relative "input_handler/modal_inputs"
+require_relative "input_handler/login_inputs"
 require_relative "input_handler/normal_mode_input"
 
 module RubyCoded
@@ -10,6 +11,7 @@ module RubyCoded
     # This class is used to handle the input events for the chat
     class InputHandler
       include ModalInputs
+      include LoginInputs
       include NormalModeInput
 
       def initialize(state)
