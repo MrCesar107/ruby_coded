@@ -13,9 +13,9 @@ module RubyCoded
           if provider_name && !provider_name.empty?
             return show_login_usage unless valid_providers.include?(provider_name)
 
-            @state.request_tui_suspend!(:login, provider: provider_name.to_sym)
+            @state.enter_login_flow!(provider: provider_name.to_sym)
           else
-            @state.request_tui_suspend!(:login)
+            @state.enter_login_flow!
           end
         end
 

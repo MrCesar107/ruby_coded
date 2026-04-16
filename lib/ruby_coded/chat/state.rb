@@ -8,6 +8,7 @@ require_relative "state/scrollable"
 require_relative "state/tool_confirmation"
 require_relative "state/plan_tracking"
 require_relative "state/token_cost"
+require_relative "state/login_flow"
 
 module RubyCoded
   module Chat
@@ -21,6 +22,7 @@ module RubyCoded
       include ToolConfirmation
       include PlanTracking
       include TokenCost
+      include LoginFlow
 
       attr_reader :input_buffer, :cursor_position, :input_scroll_offset, :messages, :scroll_offset,
                   :mode, :model_list, :model_select_index, :model_select_filter,
@@ -54,6 +56,7 @@ module RubyCoded
         init_tool_confirmation
         init_plan_tracking
         init_token_cost
+        init_login_flow
         init_plugin_state
       end
 

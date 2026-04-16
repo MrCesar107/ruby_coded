@@ -30,6 +30,7 @@ module RubyCoded
         return handle_tool_confirmation_mode(event) if @state.awaiting_tool_confirmation?
         return handle_plan_clarification_mode(event) if @state.plan_clarification?
         return handle_model_select_mode(event) if @state.model_select?
+        return handle_login_mode(event) if @state.login_active?
         return handle_streaming_mode(event) if @state.streaming?
 
         handle_normal_mode(event)

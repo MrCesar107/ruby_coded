@@ -25,34 +25,34 @@ class TestLoginCommands < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_login_without_args_requests_tui_suspend
+  def test_login_without_args_enters_provider_select
     @handler.handle("/login")
 
-    assert @state.tui_suspend_requested?
-    assert_equal :login, @state.tui_suspend_reason
-    assert_equal({}, @state.tui_suspend_metadata)
+    assert @state.login_active?
+    assert_equal :provider_select, @state.login_step
+    assert_equal 2, @state.login_items.size
   end
 
-  def test_login_with_valid_provider_requests_suspend_with_provider
+  def test_login_with_openai_enters_auth_method_select
     @handler.handle("/login openai")
 
-    assert @state.tui_suspend_requested?
-    assert_equal :login, @state.tui_suspend_reason
-    assert_equal({ provider: :openai }, @state.tui_suspend_metadata)
+    assert @state.login_active?
+    assert_equal :auth_method_select, @state.login_step
+    assert_equal :openai, @state.login_provider
   end
 
-  def test_login_with_anthropic_provider
+  def test_login_with_anthropic_enters_api_key_input
     @handler.handle("/login anthropic")
 
-    assert @state.tui_suspend_requested?
-    assert_equal :login, @state.tui_suspend_reason
-    assert_equal({ provider: :anthropic }, @state.tui_suspend_metadata)
+    assert @state.login_active?
+    assert_equal :api_key_input, @state.login_step
+    assert_equal :anthropic, @state.login_provider
   end
 
   def test_login_with_invalid_provider_shows_usage
     @handler.handle("/login fakeprovider")
 
-    refute @state.tui_suspend_requested?
+    refute @state.login_active?
     last_msg = @state.messages_snapshot.last
     assert_includes last_msg[:content], "Usage"
     assert_includes last_msg[:content], "openai"
@@ -62,18 +62,17 @@ class TestLoginCommands < Minitest::Test
   def test_login_provider_name_is_case_insensitive
     @handler.handle("/login OpenAI")
 
-    assert @state.tui_suspend_requested?
-    assert_equal({ provider: :openai }, @state.tui_suspend_metadata)
+    assert @state.login_active?
+    assert_equal :openai, @state.login_provider
   end
 
-  def test_clear_tui_suspend_resets_state
-    @state.request_tui_suspend!(:login, provider: :openai)
-    assert @state.tui_suspend_requested?
+  def test_exit_login_flow_resets_state
+    @state.enter_login_flow!
+    assert @state.login_active?
 
-    @state.clear_tui_suspend!
-    refute @state.tui_suspend_requested?
-    assert_nil @state.tui_suspend_reason
-    assert_equal({}, @state.tui_suspend_metadata)
+    @state.exit_login_flow!
+    refute @state.login_active?
+    assert_nil @state.login_step
   end
 
   def test_help_includes_login_command

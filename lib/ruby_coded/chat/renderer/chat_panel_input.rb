@@ -38,7 +38,7 @@ module RubyCoded
         end
 
         def input_locked?
-          @state.streaming? || @state.model_select? || @state.plan_clarification?
+          @state.streaming? || @state.model_select? || @state.plan_clarification? || @state.login_active?
         end
 
         def render_input_cursor(frame, area, prefix_len, scroll_offset)

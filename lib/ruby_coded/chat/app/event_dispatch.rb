@@ -16,6 +16,9 @@ module RubyCoded
           when :cancel_streaming, :tool_approved, :tool_approved_all, :tool_rejected then dispatch_llm_action(action)
           when :plan_clarification_selected, :plan_clarification_custom, :plan_clarification_skip
             dispatch_plan_clarification(action)
+          when :login_provider_selected, :login_method_selected,
+               :login_key_submitted, :login_oauth_cancel, :login_cancel
+            dispatch_login_action(action)
           when :scroll_up, :scroll_down, :scroll_top, :scroll_bottom then handle_scroll(action)
           end
         end
@@ -62,6 +65,16 @@ module RubyCoded
           @state.exit_plan_clarification!
           @state.add_message(:user, response)
           @llm_bridge.send_async(response)
+        end
+
+        def dispatch_login_action(action)
+          case action
+          when :login_provider_selected then handle_login_provider_selected
+          when :login_method_selected   then handle_login_method_selected
+          when :login_key_submitted     then handle_login_key_submitted
+          when :login_oauth_cancel      then handle_login_oauth_cancel
+          when :login_cancel            then handle_login_cancel
+          end
         end
 
         def handle_scroll(action)
