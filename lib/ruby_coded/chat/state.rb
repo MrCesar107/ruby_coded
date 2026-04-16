@@ -186,6 +186,29 @@ module RubyCoded
         input
       end
 
+      def request_tui_suspend!(reason, **metadata)
+        @tui_suspend_reason = reason
+        @tui_suspend_metadata = metadata
+        mark_dirty!
+      end
+
+      def tui_suspend_requested?
+        !@tui_suspend_reason.nil?
+      end
+
+      def tui_suspend_reason
+        @tui_suspend_reason
+      end
+
+      def tui_suspend_metadata
+        @tui_suspend_metadata || {}
+      end
+
+      def clear_tui_suspend!
+        @tui_suspend_reason = nil
+        @tui_suspend_metadata = nil
+      end
+
       private
 
       # Calls plugin state initializers (e.g. init_command_completion).

@@ -16,9 +16,10 @@ module RubyCoded
     class App
       include EventDispatch
 
-      def initialize(model:, user_config: nil)
+      def initialize(model:, user_config: nil, auth_manager: nil)
         @model = model
         @user_config = user_config
+        @auth_manager = auth_manager
         apply_plugin_extensions!
         @state = State.new(model: model)
         @llm_bridge = LLMBridge.new(@state)
@@ -51,6 +52,8 @@ module RubyCoded
           next if event.none?
 
           break if dispatch_event(event) == :quit
+
+          handle_tui_suspend if @state.tui_suspend_requested?
         end
       end
 
@@ -76,8 +79,49 @@ module RubyCoded
 
       def build_command_handler
         CommandHandler.new(
-          @state, llm_bridge: @llm_bridge, user_config: @user_config, credentials_store: @credentials_store
+          @state,
+          llm_bridge: @llm_bridge,
+          user_config: @user_config,
+          credentials_store: @credentials_store,
+          auth_manager: @auth_manager
         )
+      end
+
+      def handle_tui_suspend
+        reason = @state.tui_suspend_reason
+        metadata = @state.tui_suspend_metadata
+        @state.clear_tui_suspend!
+
+        case reason
+        when :login then perform_login_flow(metadata)
+        end
+      end
+
+      def perform_login_flow(metadata)
+        RatatuiRuby.restore_terminal
+
+        provider = metadata[:provider]
+        if provider
+          @auth_manager.login(provider)
+        else
+          @auth_manager.login_prompt
+        end
+
+        @state.add_message(:system, "Login successful. Provider configured.")
+      rescue Interrupt
+        @state.add_message(:system, "Login cancelled.")
+      rescue StandardError => e
+        @state.add_message(:system, "Login failed: #{e.message}")
+      ensure
+        RatatuiRuby.init_terminal
+        reinitialize_tui!
+      end
+
+      def reinitialize_tui!
+        tui = RatatuiRuby::TUI.new
+        @tui = tui
+        @renderer = Renderer.new(tui, @state)
+        @state.mark_dirty!
       end
 
       def apply_selected_model

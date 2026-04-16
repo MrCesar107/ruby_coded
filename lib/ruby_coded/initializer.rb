@@ -38,7 +38,7 @@ module RubyCoded
     end
 
     def start_chat
-      Chat::App.new(model: resolved_chat_model, user_config: @user_cfg).run
+      Chat::App.new(model: resolved_chat_model, user_config: @user_cfg, auth_manager: @auth_manager).run
     end
 
     def resolved_chat_model

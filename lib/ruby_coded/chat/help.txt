@@ -14,6 +14,8 @@ Available commands:
   /plan off          Disable plan mode (warns if unsaved plan)
   /plan off --force  Disable plan mode discarding unsaved plan
   /plan save [file]  Save current plan to a markdown file
+  /login             Authenticate with an AI provider
+  /login <provider>  Authenticate directly with a specific provider (openai, anthropic)
   /exit, /quit       Exit the chat
 
 Tool confirmations (agent mode):

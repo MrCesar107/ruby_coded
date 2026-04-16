@@ -13,6 +13,7 @@ module RubyCoded
           "/tokens" => "Show detailed token usage and cost",
           "/agent" => "Toggle agent mode (on/off)",
           "/plan" => "Toggle plan mode (on/off/save)",
+          "/login" => "Authenticate with an AI provider",
           "/exit" => "Exit the chat",
           "/quit" => "Exit the chat"
         }.freeze

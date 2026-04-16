@@ -8,6 +8,7 @@ require_relative "command_handler/token_formatting"
 require_relative "command_handler/token_commands"
 require_relative "command_handler/agent_commands"
 require_relative "command_handler/plan_commands"
+require_relative "command_handler/login_commands"
 
 module RubyCoded
   module Chat
@@ -21,6 +22,7 @@ module RubyCoded
       include TokenCommands
       include AgentCommands
       include PlanCommands
+      include LoginCommands
 
       BASE_COMMANDS = {
         "/help" => :cmd_help,
@@ -31,16 +33,18 @@ module RubyCoded
         "/history" => :cmd_history,
         "/tokens" => :cmd_tokens,
         "/agent" => :cmd_agent,
-        "/plan" => :cmd_plan
+        "/plan" => :cmd_plan,
+        "/login" => :cmd_login
       }.freeze
 
       HELP_TEXT = File.read(File.join(__dir__, "help.txt")).freeze
 
-      def initialize(state, llm_bridge:, user_config: nil, credentials_store: nil)
+      def initialize(state, llm_bridge:, user_config: nil, credentials_store: nil, auth_manager: nil)
         @state = state
         @llm_bridge = llm_bridge
         @user_config = user_config
         @credentials_store = credentials_store
+        @auth_manager = auth_manager
         @commands = build_command_map
       end
 
