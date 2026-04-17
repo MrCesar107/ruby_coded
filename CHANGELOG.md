@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-17
+
+### Fixed
+
+- **Startup crash when stored model provider is not authenticated**: The CLI no longer raises `RubyLLM::ConfigurationError` at startup when the model saved in `~/.ruby_coded/config.yaml` belongs to a provider that has no credentials on the current machine (e.g. switching computers with only Anthropic authenticated but a GPT model stored). Instead, the app falls back to the default model of the authenticated provider and shows an in-chat system message suggesting `/login` or `/model` to adjust.
+
+### Added
+
+- `AuthManager#provider_for_model` and `AuthManager#model_provider_authenticated?` helpers to detect the provider of a given model name and validate that its credentials are available.
+
 ## [0.2.0] - 2026-04-16
 
 ### Added

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ruby_coded (0.2.0)
+    ruby_coded (0.2.1)
       faraday (>= 2.0)
       ratatui_ruby (~> 1.4)
       ruby_llm (~> 1.13)
@@ -184,7 +184,7 @@ CHECKSUMS
   rubocop (1.86.1) sha256=44415f3f01d01a21e01132248d2fd0867572475b566ca188a0a42133a08d4531
   rubocop-ast (1.49.1) sha256=4412f3ee70f6fe4546cc489548e0f6fcf76cafcfa80fa03af67098ffed755035
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
-  ruby_coded (0.2.0)
+  ruby_coded (0.2.1)
   ruby_llm (1.14.1) sha256=7487d0f0bb9e86836d9233d656e10637370a6b22eb2555343c0a4c179ce7c500
   ruby_llm-schema (0.3.0) sha256=a591edc5ca1b7f0304f0e2261de61ba4b3bea17be09f5cf7558153adfda3dec6
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
