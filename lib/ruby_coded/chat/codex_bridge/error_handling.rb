@@ -10,6 +10,8 @@ module RubyCoded
           comienz|hazlo|constru[iy]|adelante|dale|do[ ]it|build[ ]it)\b
         /ix
 
+        UNSUPPORTED_MODEL_PATTERN = /not supported when using Codex with a ChatGPT account/i
+
         private
 
         def build_connection
@@ -43,17 +45,42 @@ module RubyCoded
                              "Plan mode disabled — switching to agent mode to implement the plan.")
         end
 
-        def attempt_with_retries(input, retries = 0)
+        def attempt_with_retries(input, retries = 0, fallback_attempted = false)
           perform_codex_request(input)
         rescue Tools::AgentCancelledError, Tools::AgentIterationLimitError, Tools::ToolRejectedError => e
           @state.add_message(:system, e.message)
         rescue CodexAPIError => e
+          if should_fallback_to_default_model?(e, fallback_attempted)
+            switch_to_default_model!(e)
+            fallback_attempted = true
+            retry
+          end
           @state.fail_last_assistant(e, friendly_message: codex_error_message(e))
         rescue Faraday::TooManyRequestsError => e
           retry if (retries = handle_rate_limit_retry(e, retries))
           @state.fail_last_assistant(e, friendly_message: rate_limit_message(e))
         rescue StandardError => e
           @state.fail_last_assistant(e, friendly_message: "Codex API error: #{e.message}")
+        end
+
+        def should_fallback_to_default_model?(error, already_attempted)
+          return false if already_attempted
+          return false unless error.status == 400
+          return false unless error.message.match?(UNSUPPORTED_MODEL_PATTERN)
+
+          @model != DEFAULT_MODEL
+        end
+
+        def switch_to_default_model!(error)
+          previous_model = @model
+          @model = DEFAULT_MODEL
+          @state.model = DEFAULT_MODEL
+          @state.reset_last_assistant_content
+          @state.add_message(
+            :system,
+            "Model '#{previous_model}' requires ChatGPT Pro. " \
+            "Falling back to #{DEFAULT_MODEL} and retrying. Detail: #{error.message}"
+          )
         end
 
         def handle_rate_limit_retry(error, retries)
@@ -70,6 +97,13 @@ module RubyCoded
 
         def codex_error_message(error)
           case error.status
+          when 400
+            if error.message.match?(UNSUPPORTED_MODEL_PATTERN)
+              "The selected model requires ChatGPT Pro. " \
+              "Use /model to pick one without the 'Pro only' tag. (#{error.message})"
+            else
+              "Codex API error: #{error.message}"
+            end
           when 401
             "Authentication failed. Your OAuth session may have expired. " \
             "Try /login to re-authenticate. (#{error.message})"

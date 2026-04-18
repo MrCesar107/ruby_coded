@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../codex_models"
+
 module RubyCoded
   module Chat
     class Renderer
@@ -88,7 +90,8 @@ module RubyCoded
           id = model.respond_to?(:id) ? model.id : model.to_s
           provider = model.respond_to?(:provider) ? model.provider : "unknown"
           current_marker = id == @state.model ? " *" : ""
-          "#{id} (#{provider})#{current_marker}"
+          pro_marker = CodexModels.pro_only?(id) ? " (Pro only)" : ""
+          "#{id} (#{provider})#{pro_marker}#{current_marker}"
         end
       end
     end

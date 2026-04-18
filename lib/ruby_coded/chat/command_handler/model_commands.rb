@@ -2,6 +2,7 @@
 
 require_relative "../model_filter"
 require_relative "../codex_models"
+require_relative "../../auth/jwt_decoder"
 
 module RubyCoded
   module Chat
@@ -74,10 +75,16 @@ module RubyCoded
 
         def models_for_provider(name, creds)
           if name == :openai && creds["auth_method"] == "oauth"
-            CodexModels.all
+            codex_models_for_plan(creds)
           else
             RubyLLM.models.by_provider(name).chat_models.to_a
           end
+        end
+
+        def codex_models_for_plan(creds)
+          token = creds["access_token"]
+          plan = token ? Auth::JWTDecoder.extract_plan_type(token) : nil
+          CodexModels.available_for_plan(plan)
         end
 
         def fetch_chat_models
