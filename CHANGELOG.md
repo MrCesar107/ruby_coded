@@ -1,7 +1,14 @@
 ## [Unreleased]
 
-- **Create a git integration tool**: Create a git tool for git workflows in projects
-- **Enable Agent mode by default**: Enable the agent mode by default when a session starts
+## [0.3.1] - 2026-06-28
+
+### Added
+
+- **Git integration tool**: New git tool for common git workflows in projects (status, diff, add, commit) backed by a shared `GitBaseTool`.
+
+### Changed
+
+- **Agent mode enabled by default**: Sessions now start in Agent mode automatically instead of requiring manual activation.
 
 ## [0.3.0] - 2026-04-24
 
