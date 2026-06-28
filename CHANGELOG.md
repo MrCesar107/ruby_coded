@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- **Enable Agent mode by default**: Enable the agent mode by default when a session starts
+
 ## [0.3.0] - 2026-04-24
 
 ### Added

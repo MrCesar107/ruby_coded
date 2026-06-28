@@ -37,6 +37,7 @@ module RubyCoded
         @fallback_from_model = fallback_from_model
         apply_plugin_extensions!
         build_components!
+        enable_default_agent_mode!
         announce_model_fallback
       end
 
@@ -121,6 +122,12 @@ module RubyCoded
           "Model #{@fallback_from_model} is not available (provider not authenticated). " \
           "Switched to #{@model}. Use /login to authenticate or /model to change."
         )
+      end
+
+      def enable_default_agent_mode!
+        return if @llm_bridge.agentic_mode
+
+        @llm_bridge.toggle_agentic_mode!(true)
       end
 
       def apply_selected_model
