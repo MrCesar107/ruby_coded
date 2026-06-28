@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Added
+
+- **Highlight the users' messages in the chat section**: Now the chat sections highlights and spots the users' mesagges in blocks
+for a easely reading of the chat
+
+### Changed
+
+- **Refactor chat panel rendering system into multiple modules**
+
 ## [0.3.1] - 2026-06-28
 
 ### Added
