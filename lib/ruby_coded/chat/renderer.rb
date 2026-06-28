@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "renderer/chat_panel_formatting"
+require_relative "renderer/chat_panel_sections"
 require_relative "renderer/chat_panel"
 require_relative "renderer/chat_panel_thinking"
 require_relative "renderer/chat_panel_input"
@@ -14,6 +16,8 @@ module RubyCoded
   module Chat
     # This class manages the rendering of the UI elements
     class Renderer
+      include ChatPanelFormatting
+      include ChatPanelSections
       include ChatPanel
       include ChatPanelThinking
       include ChatPanelInput

@@ -1,27 +1,32 @@
 # frozen_string_literal: true
 
-require "unicode/display_width"
-
 module RubyCoded
   module Chat
     class Renderer
-      # Core chat-panel rendering: message formatting, scroll management,
-      # and the main chat display area.
+      # Core chat-panel rendering pipeline: widget composition, caching,
+      # and scroll-aware layout for the main chat display area.
       module ChatPanel
+        STICKY_HEADER_TITLE = "current prompt"
+        STICKY_HEADER_HEIGHT = 4
+
         private
 
         def init_render_cache
-          @cached_formatted_text = nil
+          @cached_chat_sections = nil
           @cached_format_gen = -1
         end
 
-        def cached_formatted_text(messages)
+        def cached_chat_sections(messages)
           gen = @state.message_generation
           if gen != @cached_format_gen
-            @cached_formatted_text = format_messages_text(messages)
+            @cached_chat_sections = build_chat_sections(messages)
             @cached_format_gen = gen
           end
-          @cached_formatted_text
+          @cached_chat_sections
+        end
+
+        def cached_formatted_text(messages)
+          sections_to_text(cached_chat_sections(messages))
         end
 
         def render_chat_panel(frame, area)
@@ -36,13 +41,29 @@ module RubyCoded
         end
 
         def render_chat_standard(frame, area, messages)
-          text = messages.empty? ? cover_banner : cached_formatted_text(messages)
-          render_text_panel(frame, area, text, !messages.empty?)
+          return render_text_panel(frame, area, cover_banner, false) if messages.empty?
+
+          sections = cached_chat_sections(messages)
+          sticky = sticky_header_for(area, sections)
+
+          if sticky
+            header_area, body_area = split_chat_sticky(area)
+            render_sticky_header(frame, header_area, sticky[:header_text])
+            render_sections_panel(frame, body_area, sections)
+          else
+            render_sections_panel(frame, area, sections)
+          end
         end
 
         def render_messages_in_area(frame, area, messages)
-          text = messages.empty? ? cover_banner : format_messages_text(messages)
-          render_text_panel(frame, area, text, !messages.empty?)
+          return render_text_panel(frame, area, cover_banner, false) if messages.empty?
+
+          render_sections_panel(frame, area, build_chat_sections(messages))
+        end
+
+        def render_sections_panel(frame, area, sections)
+          text = sections_to_text(sections)
+          render_text_panel(frame, area, text, true)
         end
 
         def render_text_panel(frame, area, text, scrollable)
@@ -55,6 +76,24 @@ module RubyCoded
             block: @tui.block(title: chat_panel_title, borders: [:all])
           )
           frame.render_widget(widget, area)
+        end
+
+        def render_sticky_header(frame, area, text)
+          widget = @tui.paragraph(
+            text: text,
+            wrap: true,
+            scroll: [0, 0],
+            block: @tui.block(title: STICKY_HEADER_TITLE, borders: [:all])
+          )
+          frame.render_widget(widget, area)
+        end
+
+        def split_chat_sticky(area)
+          @tui.layout_split(
+            area,
+            direction: :vertical,
+            constraints: [@tui.constraint_length(STICKY_HEADER_HEIGHT), @tui.constraint_fill(1)]
+          )
         end
 
         def chat_scroll_y(area, text)
@@ -81,46 +120,11 @@ module RubyCoded
           messages.empty? ? cover_banner : cached_formatted_text(messages)
         end
 
-        def format_messages_text(messages)
-          messages.filter_map { |m| format_message(m) }.join("\n")
-        end
-
-        def chat_messages_text
-          cached_formatted_text(@state.messages_snapshot)
-        end
-
-        def format_message(msg)
-          case msg[:role]
-          when :tool_call, :tool_pending, :tool_result then nil
-          when :system    then "--- #{msg[:content]}"
-          when :user      then "> #{msg[:content]}"
-          when :assistant then format_assistant_message(msg[:content])
-          else                 "#{msg[:role]}: #{msg[:content]}"
-          end
-        end
-
-        def format_assistant_message(content)
-          result = strip_think_tags(content)
-          result.empty? ? nil : result
-        end
-
         def compute_scroll_y(total_lines, visible_height)
           overflow = total_lines - visible_height
           return 0 if overflow <= 0
 
           [overflow - @state.scroll_offset, 0].max
-        end
-
-        def count_wrapped_lines(text, width)
-          return 1 if width <= 0 || text.empty?
-
-          text.split("\n", -1).sum do |line|
-            line.empty? ? 1 : (display_width(line).to_f / width).ceil
-          end
-        end
-
-        def display_width(line)
-          Unicode::DisplayWidth.of(line)
         end
       end
     end

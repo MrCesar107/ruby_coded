@@ -3,6 +3,8 @@
 require "test_helper"
 require "ruby_coded/version"
 require "ruby_coded/chat/state"
+require "ruby_coded/chat/renderer/chat_panel_formatting"
+require "ruby_coded/chat/renderer/chat_panel_sections"
 require "ruby_coded/chat/renderer/chat_panel"
 require "ruby_coded/chat/renderer/chat_panel_input"
 require "ruby_coded/chat/renderer/chat_panel_thinking"
@@ -24,7 +26,7 @@ class TestRendererChatPanel < Minitest::Test
     @state.add_message(:assistant, "Hi there")
 
     text = @host.chat_panel_text
-    assert_includes text, "> Hello"
+    assert_includes text, "[YOU] Hello"
     assert_includes text, "Hi there"
   end
 
@@ -57,7 +59,7 @@ class TestRendererChatPanel < Minitest::Test
 
     @host.render_chat_panel(frame, area)
 
-    widget, = frame.rendered.first
+    widget, = frame.rendered.last
     assert_equal true, widget[:wrap]
   end
 
@@ -78,7 +80,7 @@ class TestRendererChatPanel < Minitest::Test
 
     @host.render_chat_panel(frame, area)
 
-    widget, = frame.rendered.first
+    widget, = frame.rendered.last
     scroll_y, scroll_x = widget[:scroll]
     assert_equal 0, scroll_x
     assert_operator scroll_y, :>=, 0
@@ -93,6 +95,83 @@ class TestRendererChatPanel < Minitest::Test
 
     @state.scroll_to_top
     assert_operator @state.scroll_offset, :>, 0
+  end
+
+  def test_render_chat_panel_highlights_user_messages
+    @state.add_message(:user, "Highlight me")
+
+    text = @host.chat_panel_text
+
+    assert_includes text, "[YOU] Highlight me"
+  end
+
+  def test_render_chat_panel_shows_sticky_header_when_scrolled_into_response_block
+    @state.add_message(:user, "First prompt")
+    12.times { |i| @state.add_message(:assistant, "First response line #{i}") }
+    @state.add_message(:user, "Second prompt")
+    @state.add_message(:assistant, "Second response")
+
+    frame = MockFrame.new
+    area = MockArea.new(width: 30, height: 8)
+
+    @host.render_chat_panel(frame, area)
+    @state.scroll_up(6)
+
+    frame = MockFrame.new
+    @host.render_chat_panel(frame, area)
+
+    assert_equal 2, frame.rendered.size
+    sticky_widget, = frame.rendered[0]
+    body_widget, = frame.rendered[1]
+    assert_equal "current prompt", sticky_widget[:block][:title]
+    assert_includes sticky_widget[:text], "[YOU] First prompt"
+    assert_includes body_widget[:text], "[YOU] First prompt"
+  end
+
+  def test_render_chat_panel_updates_sticky_header_for_next_section
+    @state.add_message(:user, "First prompt")
+    8.times { |i| @state.add_message(:assistant, "First response line #{i}") }
+    @state.add_message(:user, "Second prompt")
+    8.times { |i| @state.add_message(:assistant, "Second response line #{i}") }
+
+    area = MockArea.new(width: 30, height: 8)
+    @host.render_chat_panel(MockFrame.new, area)
+    @state.scroll_up(2)
+
+    frame = MockFrame.new
+    @host.render_chat_panel(frame, area)
+
+    sticky_widget, = frame.rendered[0]
+    assert_includes sticky_widget[:text], "[YOU] Second prompt"
+    refute_includes sticky_widget[:text], "[YOU] First prompt"
+  end
+
+  def test_render_chat_panel_hides_sticky_header_when_user_prompt_is_at_top
+    @state.add_message(:user, "Prompt")
+    6.times { |i| @state.add_message(:assistant, "Response line #{i}") }
+
+    frame = MockFrame.new
+    area = MockArea.new(width: 30, height: 8)
+
+    @host.render_chat_panel(frame, area)
+
+    assert_equal 1, frame.rendered.size
+    widget, = frame.rendered.first
+    assert_equal "gpt-4o", widget[:block][:title]
+    refute_equal "current prompt", widget[:block][:title]
+  end
+
+  def test_render_chat_panel_no_sticky_header_without_user_messages
+    @state.add_message(:assistant, "Hello")
+    @state.add_message(:assistant, "World")
+    frame = MockFrame.new
+    area = MockArea.new(width: 30, height: 8)
+
+    @host.render_chat_panel(frame, area)
+
+    assert_equal 1, frame.rendered.size
+    widget, = frame.rendered.first
+    assert_equal "gpt-4o", widget[:block][:title]
   end
 
   # --- Thinking panel: <think> tags ---
@@ -127,7 +206,7 @@ class TestRendererChatPanel < Minitest::Test
     @host.render_chat_panel(frame, area)
 
     chat_widget, = frame.rendered[0]
-    assert_includes chat_widget[:text], "> Explain ruby"
+    assert_includes chat_widget[:text], "[YOU] Explain ruby"
     refute_includes chat_widget[:text], "reasoning..."
   end
 
@@ -265,9 +344,9 @@ class TestRendererChatPanel < Minitest::Test
     @host.render_chat_panel(frame, area)
 
     chat_widget, = frame.rendered[0]
-    assert_includes chat_widget[:text], "> Hello"
+    assert_includes chat_widget[:text], "[YOU] Hello"
     assert_includes chat_widget[:text], "Hi!"
-    assert_includes chat_widget[:text], "> Fix the bug"
+    assert_includes chat_widget[:text], "[YOU] Fix the bug"
     refute_includes chat_widget[:text], "read_file"
   end
 
@@ -285,7 +364,7 @@ class TestRendererChatPanel < Minitest::Test
 
     assert_equal 1, frame.rendered.size
     widget, = frame.rendered.first
-    assert_includes widget[:text], "> Fix the bug"
+    assert_includes widget[:text], "[YOU] Fix the bug"
     assert_includes widget[:text], "I fixed the bug."
     refute_includes widget[:text], "read_file"
     refute_includes widget[:text], "class App; end"
@@ -298,7 +377,7 @@ class TestRendererChatPanel < Minitest::Test
     @state.add_message(:assistant, "Done!")
 
     text = @host.chat_panel_text
-    assert_includes text, "> Fix it"
+    assert_includes text, "[YOU] Fix it"
     assert_includes text, "Done!"
     refute_includes text, "read_file"
     refute_includes text, "contents"
@@ -410,6 +489,8 @@ class TestRendererChatPanel < Minitest::Test
 
 
   class ChatPanelHost
+    include RubyCoded::Chat::Renderer::ChatPanelFormatting
+    include RubyCoded::Chat::Renderer::ChatPanelSections
     include RubyCoded::Chat::Renderer::ChatPanel
     include RubyCoded::Chat::Renderer::ChatPanelInput
     include RubyCoded::Chat::Renderer::ChatPanelThinking
@@ -438,10 +519,17 @@ class TestRendererChatPanel < Minitest::Test
     end
 
     def layout_split(area, direction:, constraints:) # rubocop:disable Lint/UnusedMethodArgument
-      half = area.height / 2
-      top = MockArea.new(width: area.width, height: half)
-      bottom = MockArea.new(width: area.width, height: area.height - half)
-      [top, bottom]
+      if constraints.first[:type] == :length
+        top_height = [constraints.first[:value], area.height].min
+        top = MockArea.new(width: area.width, height: top_height)
+        bottom = MockArea.new(width: area.width, height: area.height - top_height)
+        [top, bottom]
+      else
+        half = area.height / 2
+        top = MockArea.new(width: area.width, height: half)
+        bottom = MockArea.new(width: area.width, height: area.height - half)
+        [top, bottom]
+      end
     end
 
     def constraint_fill(weight)
