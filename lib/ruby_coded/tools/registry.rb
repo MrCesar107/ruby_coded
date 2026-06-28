@@ -7,6 +7,10 @@ require_relative "edit_file_tool"
 require_relative "create_directory_tool"
 require_relative "delete_path_tool"
 require_relative "run_command_tool"
+require_relative "git_status_tool"
+require_relative "git_diff_tool"
+require_relative "git_add_tool"
+require_relative "git_commit_tool"
 
 module RubyCoded
   module Tools
@@ -14,7 +18,9 @@ module RubyCoded
     class Registry
       READONLY_TOOL_CLASSES = [
         ReadFileTool,
-        ListDirectoryTool
+        ListDirectoryTool,
+        GitStatusTool,
+        GitDiffTool
       ].freeze
 
       TOOL_CLASSES = [
@@ -23,7 +29,11 @@ module RubyCoded
         EditFileTool,
         CreateDirectoryTool,
         DeletePathTool,
-        RunCommandTool
+        RunCommandTool,
+        GitStatusTool,
+        GitDiffTool,
+        GitAddTool,
+        GitCommitTool
       ].freeze
 
       def initialize(project_root:)

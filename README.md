@@ -82,6 +82,10 @@ When agent mode is active, the model has access to these tools:
 | `create_directory` | Confirm | Create a new directory |
 | `delete_path` | Dangerous | Delete a file or directory |
 | `run_command` | Dangerous | Execute a shell command |
+| `git_status` | Safe | Show repository status |
+| `git_diff` | Safe | Show staged or unstaged diff |
+| `git_add` | Confirm | Stage files or all changes |
+| `git_commit` | Confirm | Create a local git commit with a message |
 
 Safe tools run without asking. Confirm and dangerous tools show the operation details and wait for your approval (`y` to approve, `n` to reject, `a` to approve all remaining).
 

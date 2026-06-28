@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- **Create a git integration tool**: Create a git tool for git workflows in projects
 - **Enable Agent mode by default**: Enable the agent mode by default when a session starts
 
 ## [0.3.0] - 2026-04-24

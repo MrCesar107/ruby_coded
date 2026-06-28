@@ -12,6 +12,13 @@ module RubyCoded
 
       TIMEOUT_SECONDS = 30
       MAX_OUTPUT_CHARS = 5000
+      COMMAND_ENV = {
+        "GIT_EDITOR" => "true",
+        "EDITOR" => "true",
+        "VISUAL" => "true",
+        "GIT_PAGER" => "cat",
+        "PAGER" => "cat"
+      }.freeze
 
       params do
         string :command, description: "The shell command to execute"
@@ -35,7 +42,7 @@ module RubyCoded
       private
 
       def run_with_timeout(command)
-        stdin, stdout_io, stderr_io, wait_thr = Open3.popen3(command, chdir: @project_root)
+        stdin, stdout_io, stderr_io, wait_thr = Open3.popen3(COMMAND_ENV, command, chdir: @project_root)
         stdin.close
 
         unless wait_thr.join(TIMEOUT_SECONDS)

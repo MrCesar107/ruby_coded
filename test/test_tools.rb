@@ -8,6 +8,10 @@ require "ruby_coded/tools/edit_file_tool"
 require "ruby_coded/tools/create_directory_tool"
 require "ruby_coded/tools/delete_path_tool"
 require "ruby_coded/tools/run_command_tool"
+require "ruby_coded/tools/git_status_tool"
+require "ruby_coded/tools/git_diff_tool"
+require "ruby_coded/tools/git_add_tool"
+require "ruby_coded/tools/git_commit_tool"
 
 class TestReadFileTool < Minitest::Test
   def setup
@@ -290,6 +294,15 @@ class TestRunCommandTool < Minitest::Test
     assert_includes result, "error"
   end
 
+  def test_git_commands_run_non_interactively
+    setup_git_repo(@tmpdir)
+    File.write(File.join(@tmpdir, "note.txt"), "hello\n")
+    run_git(@tmpdir, "add", "note.txt")
+    result = @tool.execute(command: "git commit -m 'test commit'")
+    assert_includes result, "Exit code: 0"
+    assert_includes result, "test commit"
+  end
+
   def test_returns_error_for_missing_command
     result = @tool.execute(command: "nonexistent_cmd_12345")
     # Depending on shell, this could be an error hash or contain exit code
@@ -299,4 +312,119 @@ class TestRunCommandTool < Minitest::Test
   def test_risk_level_is_dangerous
     assert_equal :dangerous, RubyCoded::Tools::RunCommandTool.risk_level
   end
+end
+
+class TestGitTools < Minitest::Test
+  def setup
+    @tmpdir = Dir.mktmpdir
+    setup_git_repo(@tmpdir)
+    @status_tool = RubyCoded::Tools::GitStatusTool.new(project_root: @tmpdir)
+    @diff_tool = RubyCoded::Tools::GitDiffTool.new(project_root: @tmpdir)
+    @add_tool = RubyCoded::Tools::GitAddTool.new(project_root: @tmpdir)
+    @commit_tool = RubyCoded::Tools::GitCommitTool.new(project_root: @tmpdir)
+  end
+
+  def teardown
+    FileUtils.remove_entry(@tmpdir)
+  end
+
+  def test_git_status_is_safe
+    assert_equal :safe, RubyCoded::Tools::GitStatusTool.risk_level
+  end
+
+  def test_git_diff_is_safe
+    assert_equal :safe, RubyCoded::Tools::GitDiffTool.risk_level
+  end
+
+  def test_git_add_is_confirm
+    assert_equal :confirm, RubyCoded::Tools::GitAddTool.risk_level
+  end
+
+  def test_git_commit_is_confirm
+    assert_equal :confirm, RubyCoded::Tools::GitCommitTool.risk_level
+  end
+
+  def test_git_status_reports_branch
+    result = @status_tool.execute
+    assert_includes result, "##"
+  end
+
+  def test_git_diff_shows_unstaged_changes
+    path = File.join(@tmpdir, "note.txt")
+    File.write(path, "hello\n")
+    @add_tool.execute(paths: ["note.txt"])
+    @commit_tool.execute(message: "Add note")
+
+    File.write(path, "hello\nworld\n")
+    result = @diff_tool.execute
+    assert_includes result, "note.txt"
+  end
+
+  def test_git_add_stages_specific_paths
+    File.write(File.join(@tmpdir, "note.txt"), "hello\n")
+    result = @add_tool.execute(paths: ["note.txt"])
+    assert_includes result, "Staged paths: note.txt"
+
+    status = @status_tool.execute
+    assert_includes status, "A  note.txt"
+  end
+
+  def test_git_add_all_stages_everything
+    File.write(File.join(@tmpdir, "one.txt"), "1")
+    File.write(File.join(@tmpdir, "two.txt"), "2")
+    result = @add_tool.execute(all: true)
+    assert_includes result, "Staged all changes"
+  end
+
+  def test_git_commit_creates_commit
+    File.write(File.join(@tmpdir, "note.txt"), "hello\n")
+    @add_tool.execute(paths: ["note.txt"])
+    result = @commit_tool.execute(message: "Add note")
+    assert_includes result, "Created commit"
+    assert_includes result, "Add note"
+  end
+
+  def test_git_commit_can_stage_all_first
+    File.write(File.join(@tmpdir, "note.txt"), "hello\n")
+    result = @commit_tool.execute(message: "Add note", add_all: true)
+    assert_includes result, "Staged all changes and created commit"
+  end
+
+  def test_git_commit_returns_clear_error_when_nothing_to_commit
+    result = @commit_tool.execute(message: "Empty commit")
+    assert_equal({ error: "Nothing to commit. Working tree clean or no staged changes." }, result)
+  end
+
+  def test_git_tools_fail_outside_repo
+    outside = File.realpath(Dir.mktmpdir)
+    begin
+      tool = RubyCoded::Tools::GitStatusTool.new(project_root: outside)
+      result = tool.execute
+      assert_equal({ error: "Not a git repository: #{outside}" }, result)
+    ensure
+      FileUtils.remove_entry(outside)
+    end
+  end
+end
+
+private
+
+def setup_git_repo(dir)
+  run_git(dir, "init")
+  run_git(dir, "config", "user.name", "RubyCoded Test")
+  run_git(dir, "config", "user.email", "test@example.com")
+end
+
+def run_git(dir, *args)
+  env = {
+    "GIT_EDITOR" => "true",
+    "EDITOR" => "true",
+    "VISUAL" => "true",
+    "GIT_PAGER" => "cat",
+    "PAGER" => "cat"
+  }
+  stdout, stderr, status = Open3.capture3(env, "git", *args, chdir: dir)
+  raise "git #{args.join(' ')} failed: #{stderr}" unless status.success?
+
+  stdout
 end

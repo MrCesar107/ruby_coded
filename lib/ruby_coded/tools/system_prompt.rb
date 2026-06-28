@@ -15,6 +15,9 @@ module RubyCoded
         - The user will be asked to confirm destructive operations (write, edit, delete).
         - When listing directories, start with the project root to orient yourself.
         - Be concise in your explanations but thorough in your actions.
+        - Git workflows are allowed when the user asks for them. Prefer dedicated git tools for status, diff, add, and commit.
+        - For git commits, always use a non-interactive commit message and never rely on opening an editor.
+        - Do not push, pull, fetch, rebase, or perform other remote/history-rewriting git actions unless the user explicitly asks.
 
         Efficiency:
         - You have a budget of %<max_write_rounds>d write/edit/delete tool calls that auto-resets when reached, and a hard limit of %<max_total_rounds>d total tool calls per request.

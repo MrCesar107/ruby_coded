@@ -38,12 +38,16 @@ class TestToolRegistry < Minitest::Test
   def test_risk_level_for_safe_tools
     assert_equal :safe, @registry.risk_level_for("read_file_tool")
     assert_equal :safe, @registry.risk_level_for("list_directory_tool")
+    assert_equal :safe, @registry.risk_level_for("git_status_tool")
+    assert_equal :safe, @registry.risk_level_for("git_diff_tool")
   end
 
   def test_risk_level_for_confirm_tools
     assert_equal :confirm, @registry.risk_level_for("write_file_tool")
     assert_equal :confirm, @registry.risk_level_for("edit_file_tool")
     assert_equal :confirm, @registry.risk_level_for("create_directory_tool")
+    assert_equal :confirm, @registry.risk_level_for("git_add_tool")
+    assert_equal :confirm, @registry.risk_level_for("git_commit_tool")
   end
 
   def test_risk_level_for_dangerous_tools
@@ -58,11 +62,15 @@ class TestToolRegistry < Minitest::Test
   def test_safe_tool_with_namespaced_name
     assert @registry.safe_tool?("ruby_coded--tools--read_file_tool")
     assert @registry.safe_tool?("ruby_coded--tools--list_directory_tool")
+    assert @registry.safe_tool?("ruby_coded--tools--git_status_tool")
+    assert @registry.safe_tool?("ruby_coded--tools--git_diff_tool")
   end
 
   def test_risk_level_with_namespaced_name
     assert_equal :safe, @registry.risk_level_for("ruby_coded--tools--read_file_tool")
+    assert_equal :safe, @registry.risk_level_for("ruby_coded--tools--git_status_tool")
     assert_equal :confirm, @registry.risk_level_for("ruby_coded--tools--write_file_tool")
+    assert_equal :confirm, @registry.risk_level_for("ruby_coded--tools--git_commit_tool")
     assert_equal :dangerous, @registry.risk_level_for("ruby_coded--tools--delete_path_tool")
   end
 
