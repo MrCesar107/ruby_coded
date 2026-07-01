@@ -64,6 +64,8 @@ On first launch you'll be asked to authenticate with a provider. After that, you
 | `/login` | Authenticate with a provider (OpenAI, Anthropic) |
 | `/commands reload` | Reload custom markdown commands from the current project |
 | `/commands list` | List currently loaded custom markdown commands |
+| `/skills reload` | Reload project-local skills from the current project |
+| `/skills list` | List currently loaded project-local skills |
 | `/tokens` | Show detailed token usage breakdown |
 | `/history` | Show conversation history |
 | `/clear` | Clear the conversation |
@@ -172,6 +174,100 @@ List currently loaded custom commands:
 - Core commands take precedence over custom commands.
 - Plugin commands also take precedence over custom Markdown commands.
 - Invalid Markdown command files are ignored during reload.
+
+### Project skills
+
+RubyCoded also supports project-local skills: reusable Markdown instructions that are automatically injected into chat, plan, and agent behavior when they match the active mode.
+
+Skills are loaded from:
+
+```bash
+.rubycoded/skills/
+```
+
+This path is intentionally different from custom commands, which use:
+
+```bash
+.ruby_coded/commands/
+```
+
+Each `.md` file defines one skill.
+
+#### Skill file format
+
+Use YAML frontmatter followed by the skill body:
+
+```md
+---
+name: Rails Migration Safety
+description: Improve safety when changing schema or migrations
+modes:
+  - agent
+  - plan
+tags:
+  - rails
+  - migration
+trigger: schema
+priority: 10
+---
+
+Before proposing or applying migration changes:
+- inspect existing schema and recent migrations
+- prefer additive, reversible changes
+- call out data backfill or locking risks explicitly
+```
+
+#### Required fields
+
+- `name` — unique skill name within the project
+- `description` — short explanation shown in `/skills list`
+- `modes` — one or more supported modes: `chat`, `plan`, `agent`
+
+#### Optional fields
+
+- `tags` — keywords used for simple relevance matching
+- `trigger` — plain-text trigger checked against the current request
+- `priority` — higher-priority skills are listed first and applied first
+
+#### How skills are activated
+
+Current behavior is intentionally simple:
+
+- all skills compatible with the active mode are loaded
+- if a request matches skill `tags` or `trigger`, matching skills are preferred
+- if nothing matches, all mode-compatible skills remain available
+
+This means skills are useful immediately without requiring manual activation UI.
+
+#### Managing skills
+
+Reload skills after adding, editing, or deleting skill files:
+
+```bash
+/skills reload
+```
+
+List the currently loaded skills:
+
+```bash
+/skills list
+```
+
+The reload command reports:
+
+- how many skills were added
+- how many were removed
+- how many are currently available
+- how many invalid files were ignored
+- how many duplicate skill names were ignored
+
+#### Skill behavior notes
+
+- Skills are project-local and loaded relative to the current project root.
+- Skills are injected into system instructions for `chat`, `plan`, and `agent` modes.
+- If a skill conflicts with higher-priority system instructions or the user’s explicit request, the higher-priority instruction should win.
+- Invalid or malformed skill files are ignored during reload.
+- If duplicate skill names exist, the first loaded definition wins and later duplicates are ignored.
 
 ## Keyboard shortcuts
 

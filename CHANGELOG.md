@@ -4,10 +4,14 @@
 
 - **Highlight the users' messages in the chat section**: Now the chat sections highlights and spots the users' mesagges in blocks
 for a easely reading of the chat
+- **Project-local skills system**: RubyCoded can now load Markdown skill files from `.rubycoded/skills/` using YAML frontmatter metadata (`name`, `description`, `modes`, optional `tags`, `trigger`, and `priority`) and expose them as reusable project instructions.
+- **Skill management commands**: Added `/skills reload` and `/skills list` to reload and inspect project-local skills without restarting the application.
+- **Skill validation and cataloging**: Added a dedicated `RubyCoded::Skills` subsystem with a markdown loader, normalized skill definitions, duplicate detection, invalid file reporting, and mode-aware in-memory cataloging.
 
 ### Changed
 
 - **Refactor chat panel rendering system into multiple modules**
+- **Prompt construction now supports project skills**: Chat, plan, and agent mode instructions now append relevant project-local skills so project-specific guidance is consistently available across runtime modes, including Codex-backed sessions.
 
 ## [0.3.1] - 2026-06-28
 
