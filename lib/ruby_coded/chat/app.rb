@@ -46,6 +46,7 @@ module RubyCoded
           project_root: Dir.pwd,
           plugin_registry: RubyCoded.plugin_registry
         )
+        @skill_catalog = RubyCoded::Skills::Catalog.new(project_root: Dir.pwd)
 
         @state = State.new(model: @model, command_catalog: @command_catalog)
         @credentials_store = Auth::CredentialsStore.new(user_config: @user_config)
@@ -109,7 +110,8 @@ module RubyCoded
           user_config: @user_config,
           credentials_store: @credentials_store,
           auth_manager: @auth_manager,
-          command_catalog: @command_catalog
+          command_catalog: @command_catalog,
+          skill_catalog: @skill_catalog
         )
       end
 
@@ -154,10 +156,15 @@ module RubyCoded
         if openai_creds && openai_creds["auth_method"] == "oauth"
           @state.codex_mode = true
           ensure_valid_codex_model!
-          CodexBridge.new(@state, credentials_store: @credentials_store, auth_manager: @auth_manager)
+          CodexBridge.new(
+            @state,
+            credentials_store: @credentials_store,
+            auth_manager: @auth_manager,
+            skill_catalog: @skill_catalog
+          )
         else
           @state.codex_mode = false
-          LLMBridge.new(@state)
+          LLMBridge.new(@state, skill_catalog: @skill_catalog)
         end
       end
 
@@ -170,6 +177,7 @@ module RubyCoded
 
       def recreate_bridge!
         @command_catalog.reload!
+        @skill_catalog.reload!
         agentic = @llm_bridge.agentic_mode
         plan = @llm_bridge.plan_mode
         @llm_bridge = create_bridge

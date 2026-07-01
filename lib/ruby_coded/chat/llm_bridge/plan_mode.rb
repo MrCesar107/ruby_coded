@@ -40,7 +40,11 @@ module RubyCoded
         def configure_plan!(chat)
           readonly_tools = @tool_registry.build_readonly_tools
           chat.with_tools(*readonly_tools, replace: true)
-          chat.with_instructions(Tools::PlanSystemPrompt.build(project_root: @project_root))
+          instructions = Tools::PlanSystemPrompt.build(project_root: @project_root)
+          apply_instructions_if_supported(
+            chat,
+            RubyCoded::Skills::PromptFormatter.append(instructions, skills_for_mode(:plan))
+          )
 
           chat.on_tool_call { |tool_call| handle_tool_call(tool_call) }
           chat.on_tool_result { |result| handle_tool_result(result) }

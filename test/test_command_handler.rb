@@ -7,6 +7,7 @@ require "ruby_coded/chat/state"
 require "ruby_coded/auth/credentials_store"
 require "ruby_coded/auth/auth_manager"
 require "ruby_coded/commands/catalog"
+require "ruby_coded/skills/catalog"
 
 class TestCommandHandler < Minitest::Test
   def setup
@@ -14,6 +15,7 @@ class TestCommandHandler < Minitest::Test
     @config_path = File.join(@tmpdir, "config.yaml")
 
     @command_catalog = RubyCoded::Commands::Catalog.new(project_root: @tmpdir, plugin_registry: RubyCoded.plugin_registry)
+    @skill_catalog = RubyCoded::Skills::Catalog.new(project_root: @tmpdir)
     @state = RubyCoded::Chat::State.new(model: "gpt-4o", command_catalog: @command_catalog)
     @llm_bridge = MockLLMBridge.new
     @credentials_store = RubyCoded::Auth::CredentialsStore.new(config_path: @config_path)
@@ -23,7 +25,8 @@ class TestCommandHandler < Minitest::Test
       llm_bridge: @llm_bridge,
       user_config: @user_config,
       credentials_store: @credentials_store,
-      command_catalog: @command_catalog
+      command_catalog: @command_catalog,
+      skill_catalog: @skill_catalog
     )
   end
 
@@ -273,6 +276,87 @@ class TestCommandHandler < Minitest::Test
     assert_equal "Usage: /commands [reload|list]", @state.messages_snapshot.last[:content]
   end
 
+  def test_skills_list_shows_empty_state
+    @handler.handle("/skills list")
+
+    assert_equal "No project skills loaded. Add markdown files under .rubycoded/skills and run /skills reload.",
+                 @state.messages_snapshot.last[:content]
+  end
+
+  def test_skills_reload_and_list_show_loaded_skills
+    skills_dir = File.join(@tmpdir, ".rubycoded", "skills")
+    FileUtils.mkdir_p(skills_dir)
+
+    File.write(
+      File.join(skills_dir, "rails.md"),
+      <<~MD
+        ---
+        name: Rails Skill
+        description: Help with Rails changes
+        modes: [agent, plan]
+        tags: [rails]
+        ---
+
+        Inspect related models and migrations first.
+      MD
+    )
+
+    @handler.handle("/skills reload")
+    assert_equal "Skills reloaded. Added: 1, removed: 0, total skills: 1, invalid files ignored: 0, duplicates ignored: 0.",
+                 @state.messages_snapshot.last[:content]
+
+    @handler.handle("/skills list")
+    message = @state.messages_snapshot.last[:content]
+    assert_includes message, "Project skills:"
+    assert_includes message, "Rails Skill"
+    assert_includes message, "Help with Rails changes"
+    assert_includes message, "agent, plan"
+  end
+
+  def test_skills_reload_reports_invalid_and_duplicates
+    skills_dir = File.join(@tmpdir, ".rubycoded", "skills")
+    FileUtils.mkdir_p(skills_dir)
+
+    File.write(
+      File.join(skills_dir, "one.md"),
+      <<~MD
+        ---
+        name: Duplicate Skill
+        description: First
+        modes: [chat]
+        ---
+
+        First body.
+      MD
+    )
+
+    File.write(
+      File.join(skills_dir, "two.md"),
+      <<~MD
+        ---
+        name: Duplicate Skill
+        description: Second
+        modes: [chat]
+        ---
+
+        Second body.
+      MD
+    )
+
+    File.write(File.join(skills_dir, "invalid.md"), "# invalid")
+
+    @handler.handle("/skills reload")
+
+    assert_equal "Skills reloaded. Added: 1, removed: 0, total skills: 1, invalid files ignored: 1, duplicates ignored: 1.\nInvalid files: invalid.md\nDuplicate skills: duplicate skill",
+                 @state.messages_snapshot.last[:content]
+  end
+
+  def test_skills_without_subcommand_show_usage
+    @handler.handle("/skills")
+
+    assert_equal "Usage: /skills [reload|list]", @state.messages_snapshot.last[:content]
+  end
+
   def test_state_model_select_navigation
     models = [FakeModel.new("a", "p"), FakeModel.new("b", "p"), FakeModel.new("c", "p")]
     @state.enter_model_select!(models)
@@ -434,7 +518,8 @@ class TestCommandHandler < Minitest::Test
       @state,
       llm_bridge: @llm_bridge,
       user_config: @user_config,
-      command_catalog: @command_catalog
+      command_catalog: @command_catalog,
+      skill_catalog: @skill_catalog
     )
 
     fake_models = [FakeModel.new("gpt-4o", "openai")]
@@ -457,7 +542,8 @@ class TestCommandHandler < Minitest::Test
       llm_bridge: @llm_bridge,
       user_config: @user_config,
       credentials_store: RubyCoded::Auth::CredentialsStore.new(config_path: @config_path),
-      command_catalog: @command_catalog
+      command_catalog: @command_catalog,
+      skill_catalog: @skill_catalog
     )
   end
 

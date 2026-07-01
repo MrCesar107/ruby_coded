@@ -10,6 +10,7 @@ require_relative "command_handler/agent_commands"
 require_relative "command_handler/plan_commands"
 require_relative "command_handler/login_commands"
 require_relative "command_handler/custom_commands"
+require_relative "command_handler/skill_commands"
 
 module RubyCoded
   module Chat
@@ -25,6 +26,7 @@ module RubyCoded
       include PlanCommands
       include LoginCommands
       include CustomCommands
+      include SkillCommands
 
       HELP_TEXT = File.read(File.join(__dir__, "help.txt")).freeze
 
@@ -35,6 +37,7 @@ module RubyCoded
         @credentials_store = deps[:credentials_store]
         @auth_manager = deps[:auth_manager]
         @command_catalog = command_catalog
+        @skill_catalog = deps[:skill_catalog]
         @commands = build_command_map
       end
 

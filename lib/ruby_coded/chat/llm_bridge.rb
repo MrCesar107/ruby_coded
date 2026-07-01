@@ -6,6 +6,7 @@ require_relative "../tools/system_prompt"
 require_relative "../tools/plan_system_prompt"
 require_relative "../tools/agent_cancelled_error"
 require_relative "../tools/agent_iteration_limit_error"
+require_relative "../skills"
 require_relative "plan_clarification_parser"
 require_relative "llm_bridge/tool_call_handling"
 require_relative "llm_bridge/streaming_retries"
@@ -28,11 +29,12 @@ module RubyCoded
 
       attr_reader :agentic_mode, :plan_mode, :project_root
 
-      def initialize(state, project_root: Dir.pwd)
+      def initialize(state, project_root: Dir.pwd, skill_catalog: nil)
         @state = state
         @chat_mutex = Mutex.new
         @cancel_requested = false
         @project_root = project_root
+        @skill_catalog = skill_catalog || RubyCoded::Skills::Catalog.new(project_root: @project_root)
         @agentic_mode = false
         @plan_mode = false
         @tool_registry = Tools::Registry.new(project_root: @project_root)
@@ -106,6 +108,16 @@ module RubyCoded
 
       private
 
+      def skills_for_mode(mode, input: nil)
+        @skill_catalog.relevant_skills_for(mode: mode, input: input)
+      end
+
+      def apply_instructions_if_supported(chat, instructions)
+        return unless chat.respond_to?(:with_instructions)
+
+        chat.with_instructions(instructions)
+      end
+
       def reset_call_counts
         @tool_call_count = 0
         @write_tool_call_count = 0
@@ -124,6 +136,15 @@ module RubyCoded
           configure_plan!(chat)
         else
           chat.with_tools(replace: true)
+          instructions = Tools::SystemPrompt.build(
+            project_root: @project_root,
+            max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
+            max_total_rounds: MAX_TOTAL_TOOL_ROUNDS
+          )
+          apply_instructions_if_supported(
+            chat,
+            RubyCoded::Skills::PromptFormatter.append(instructions, skills_for_mode(:chat))
+          )
         end
       end
     end

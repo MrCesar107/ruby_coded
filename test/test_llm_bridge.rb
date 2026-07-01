@@ -4,6 +4,7 @@ require "test_helper"
 require "ruby_llm"
 require "ruby_coded/chat/llm_bridge"
 require "ruby_coded/chat/state"
+require "ruby_coded/skills/catalog"
 
 class TestLLMBridge < Minitest::Test
   def setup
@@ -224,6 +225,80 @@ class TestLLMBridge < Minitest::Test
     end
   end
 
+  def test_chat_mode_injects_skills_into_instructions
+    tmpdir = Dir.mktmpdir
+    skills_dir = File.join(tmpdir, ".rubycoded", "skills")
+    FileUtils.mkdir_p(skills_dir)
+    File.write(File.join(skills_dir, "chat.md"), <<~MD)
+      ---
+      name: Chat Skill
+      description: Be mindful of project conventions
+      modes: [chat]
+      ---
+
+      Mention project conventions when giving advice.
+    MD
+
+    chat = build_configurable_chat_with_instruction_capture
+    bridge = build_bridge_with_configurable_chat(chat, project_root: tmpdir,
+                                                       skill_catalog: RubyCoded::Skills::Catalog.new(project_root: tmpdir))
+    bridge.send(:apply_mode_config!, chat)
+
+    assert_includes chat.instructions, "## Active project skills"
+    assert_includes chat.instructions, "Chat Skill"
+  ensure
+    FileUtils.remove_entry(tmpdir) if tmpdir && Dir.exist?(tmpdir)
+  end
+
+  def test_plan_mode_injects_plan_skills_into_instructions
+    tmpdir = Dir.mktmpdir
+    skills_dir = File.join(tmpdir, ".rubycoded", "skills")
+    FileUtils.mkdir_p(skills_dir)
+    File.write(File.join(skills_dir, "plan.md"), <<~MD)
+      ---
+      name: Plan Skill
+      description: Structure plans carefully
+      modes: [plan]
+      ---
+
+      Prefer incremental milestones.
+    MD
+
+    chat = build_configurable_chat_with_instruction_capture
+    bridge = build_bridge_with_configurable_chat(chat, project_root: tmpdir,
+                                                       skill_catalog: RubyCoded::Skills::Catalog.new(project_root: tmpdir))
+    bridge.toggle_plan_mode!(true)
+
+    assert_includes chat.instructions, "Plan Skill"
+    refute_includes chat.instructions, "Chat Skill"
+  ensure
+    FileUtils.remove_entry(tmpdir) if tmpdir && Dir.exist?(tmpdir)
+  end
+
+  def test_agent_mode_injects_agent_skills_into_instructions
+    tmpdir = Dir.mktmpdir
+    skills_dir = File.join(tmpdir, ".rubycoded", "skills")
+    FileUtils.mkdir_p(skills_dir)
+    File.write(File.join(skills_dir, "agent.md"), <<~MD)
+      ---
+      name: Agent Skill
+      description: Be careful during implementation
+      modes: [agent]
+      ---
+
+      Read related tests before changing behavior.
+    MD
+
+    chat = build_configurable_chat_with_instruction_capture
+    bridge = build_bridge_with_configurable_chat(chat, project_root: tmpdir,
+                                                       skill_catalog: RubyCoded::Skills::Catalog.new(project_root: tmpdir))
+    bridge.toggle_agentic_mode!(true)
+
+    assert_includes chat.instructions, "Agent Skill"
+  ensure
+    FileUtils.remove_entry(tmpdir) if tmpdir && Dir.exist?(tmpdir)
+  end
+
   private
 
   def rate_limit_error
@@ -281,9 +356,20 @@ class TestLLMBridge < Minitest::Test
     chat
   end
 
-  def build_bridge_with_configurable_chat(chat)
+  def build_configurable_chat_with_instruction_capture
+    chat = build_configurable_chat
+    instructions = nil
+    chat.define_singleton_method(:with_instructions) do |value|
+      instructions = value
+      chat
+    end
+    chat.define_singleton_method(:instructions) { instructions }
+    chat
+  end
+
+  def build_bridge_with_configurable_chat(chat, project_root: Dir.pwd, skill_catalog: nil)
     RubyLLM.stub(:chat, chat) do
-      return RubyCoded::Chat::LLMBridge.new(@state)
+      return RubyCoded::Chat::LLMBridge.new(@state, project_root: project_root, skill_catalog: skill_catalog)
     end
   end
 

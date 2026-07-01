@@ -68,16 +68,19 @@ module RubyCoded
         end
 
         def build_instructions
-          if @agentic_mode
-            Tools::SystemPrompt.build(
-              project_root: @project_root, max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
-              max_total_rounds: MAX_TOTAL_TOOL_ROUNDS
-            )
-          elsif @plan_mode
-            Tools::PlanSystemPrompt.build(project_root: @project_root)
-          else
-            DEFAULT_INSTRUCTIONS
-          end
+          instructions = if @agentic_mode
+                           Tools::SystemPrompt.build(
+                             project_root: @project_root, max_write_rounds: MAX_WRITE_TOOL_ROUNDS,
+                             max_total_rounds: MAX_TOTAL_TOOL_ROUNDS
+                           )
+                         elsif @plan_mode
+                           Tools::PlanSystemPrompt.build(project_root: @project_root)
+                         else
+                           DEFAULT_INSTRUCTIONS
+                         end
+
+          mode = @agentic_mode ? :agent : (@plan_mode ? :plan : :chat)
+          RubyCoded::Skills::PromptFormatter.append(instructions, @skill_catalog.relevant_skills_for(mode: mode))
         end
 
         def build_tools_spec

@@ -9,6 +9,7 @@ require_relative "../tools/system_prompt"
 require_relative "../tools/plan_system_prompt"
 require_relative "../tools/agent_cancelled_error"
 require_relative "../tools/agent_iteration_limit_error"
+require_relative "../skills"
 require_relative "../auth/jwt_decoder"
 require_relative "codex_bridge/request_builder"
 require_relative "codex_bridge/sse_parser"
@@ -51,11 +52,12 @@ module RubyCoded
 
       attr_reader :agentic_mode, :plan_mode, :project_root
 
-      def initialize(state, credentials_store:, auth_manager:, project_root: Dir.pwd)
+      def initialize(state, credentials_store:, auth_manager:, project_root: Dir.pwd, skill_catalog: nil)
         @state = state
         @credentials_store = credentials_store
         @auth_manager = auth_manager
         @project_root = project_root
+        @skill_catalog = skill_catalog || RubyCoded::Skills::Catalog.new(project_root: @project_root)
         @cancel_requested = @agentic_mode = @plan_mode = false
         @model = state.model
         @conversation_history = []

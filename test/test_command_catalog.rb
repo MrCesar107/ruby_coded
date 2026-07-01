@@ -22,6 +22,8 @@ class TestCommandCatalog < Minitest::Test
     assert_equal "Show help message", catalog.command_descriptions["/help"]
     assert_equal :cmd_commands, catalog.command_map["/commands"]
     assert_equal "Manage custom markdown commands", catalog.command_descriptions["/commands"]
+    assert_equal :cmd_skills, catalog.command_map["/skills"]
+    assert_equal "Manage project-local skills", catalog.command_descriptions["/skills"]
   end
 
   def test_includes_plugin_commands

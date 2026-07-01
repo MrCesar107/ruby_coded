@@ -28,7 +28,7 @@ An AI-powered terminal coding assistant built in Ruby. Chat with LLMs, let an ag
 - **Tool confirmation** — Write and dangerous operations require explicit approval; safe operations (read, list) run automatically
 - **Token & cost tracking** — Live status bar showing token usage, estimated session cost, and auth mode indicator
 - **Plugin system** — Extend the chat with custom state, input handlers, renderer overlays, and commands
-- **Slash commands** — `/agent`, `/plan`, `/model`, `/login`, `/history`, `/tokens`, `/commands reload`, `/commands list`, `/help`, and more
+- **Slash commands** — `/agent`, `/plan`, `/model`, `/login`, `/history`, `/tokens`, `/commands reload`, `/commands list`, `/skills reload`, `/skills list`, `/help`, and more
 
 ## Requirements
 

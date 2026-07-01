@@ -83,6 +83,13 @@ module RubyCoded
           handler: :cmd_commands,
           source: :core,
           usage: "/commands [reload|list]"
+        },
+        {
+          name: "/skills",
+          description: "Manage project-local skills",
+          handler: :cmd_skills,
+          source: :core,
+          usage: "/skills [reload|list]"
         }
       ].freeze
 
